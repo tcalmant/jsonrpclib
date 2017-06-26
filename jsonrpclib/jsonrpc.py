@@ -583,6 +583,9 @@ class ServerProxy(XMLServerProxy):
         """
         Returns a callable object to call the remote service
         """
+        if name.startswith("__") and name.endswith("__"):
+            # Don't proxy special methods.
+            raise AttributeError("ServerProxy has no attribute '%s'" % name)
         # Same as original, just with new _Method reference
         return _Method(self._request, name)
 

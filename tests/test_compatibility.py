@@ -113,6 +113,10 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(request == verify_request)
         self.assertTrue(response == verify_response)
 
+    def test_special_method(self):
+        self.assertRaises(AttributeError, getattr, self.client, '__special_method__')
+        self.assertIsNone(self.history.request)
+
     def test_invalid_json(self):
         invalid_json = '{"jsonrpc": "2.0", "method": "foobar, ' + \
             '"params": "bar", "baz]'
