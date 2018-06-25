@@ -55,6 +55,7 @@ setup(
     "usable with Pelix remote services.",
     long_description=open("README.rst").read(),
     packages=["jsonrpclib"],
+    test_suite="tests",
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
