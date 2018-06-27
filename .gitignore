@@ -8,6 +8,11 @@ __pycache__
 .project
 .pydevproject
 
+# VS Code
+.vscode
+.cache
+.mypy_cache
+
 # Tox
 .tox/
 .coverage
