@@ -18,6 +18,9 @@ __pycache__
 .coverage
 htmlcov/
 
+# Development environment
+venv*/
+
 # When installed in develop mode
 *.egg-info/
 
@@ -25,4 +28,3 @@ htmlcov/
 build/*
 dist/*
 *.egg-info/
-
