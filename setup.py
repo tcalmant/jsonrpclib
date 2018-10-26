@@ -4,13 +4,13 @@
 Installation script
 
 :authors: Josh Marshall, Thomas Calmant
-:copyright: Copyright 2017, Thomas Calmant
+:copyright: Copyright 2018, Thomas Calmant
 :license: Apache License 2.0
-:version: 0.3.1
+:version: 0.3.2
 
 ..
 
-    Copyright 2017 Thomas Calmant
+    Copyright 2018 Thomas Calmant
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ Installation script
 """
 
 # Module version
-__version_info__ = (0, 3, 1)
+__version_info__ = (0, 3, 2)
 __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
@@ -48,23 +48,24 @@ setup(
     author="Thomas Calmant",
     author_email="thomas.calmant+github@gmail.com",
     url="http://github.com/tcalmant/jsonrpclib/",
-    description=
-    "This project is an implementation of the JSON-RPC v2.0 specification "
-    "(backwards-compatible) as a client library, for Python 2.7 and Python 3."
-    "This version is a fork of jsonrpclib by Josh Marshall, "
-    "usable with Pelix remote services.",
+    description="This project is an implementation of the JSON-RPC v2.0 "
+    "specification (backwards-compatible) as a client library, for Python 2.7 "
+    "and Python 3. This version is a fork of jsonrpclib by Josh Marshall, "
+    "made to be also usable with Pelix/iPOPO remote services.",
     long_description=open("README.rst").read(),
     packages=["jsonrpclib"],
     test_suite="tests",
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: Apache Software License',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6']
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6"
+        "Programming Language :: Python :: 3.7",
+    ],
 )
