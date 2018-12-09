@@ -520,7 +520,7 @@ class SimpleJSONRPCServer(socketserver.TCPServer, SimpleJSONRPCDispatcher):
                 super(RequestHandlerWrapper, self).__init__(*args, **kwargs)
 
         # Set up the server
-        socketserver.TCPServer.__init__(self, addr, requestHandler,
+        socketserver.TCPServer.__init__(self, addr, RequestHandlerWrapper,
                                         bind_and_activate)
 
         # Windows-specific
