@@ -594,7 +594,7 @@ class CGIJSONRPCRequestHandler(SimpleJSONRPCDispatcher, CGIXMLRPCRequestHandler)
     """
     JSON-RPC CGI handler (and dispatcher)
     """
-    def __init__(self, encoding=None, config=jsonrpclib.config.DEFAULT):
+    def __init__(self, encoding="UTF-8", config=jsonrpclib.config.DEFAULT):
         """
         Sets up the dispatcher
 
@@ -602,7 +602,7 @@ class CGIJSONRPCRequestHandler(SimpleJSONRPCDispatcher, CGIXMLRPCRequestHandler)
         :param config: A JSONRPClib Config instance
         """
         SimpleJSONRPCDispatcher.__init__(self, encoding, config)
-        CGIXMLRPCRequestHandler.__init__(self)
+        CGIXMLRPCRequestHandler.__init__(self, encoding=encoding)
 
     def handle_jsonrpc(self, request_text):
         """
@@ -614,10 +614,12 @@ class CGIJSONRPCRequestHandler(SimpleJSONRPCDispatcher, CGIXMLRPCRequestHandler)
             writer = sys.stdout
 
         response = self._marshaled_dispatch(request_text)
-        print('Content-Type: {0}'.format(self.json_config.content_type))
-        print('Content-Length: {0:d}'.format(len(response)))
+        response = response.encode(self.encoding)
+        print("Content-Type:", self.json_config.content_type)
+        print("Content-Length:", len(response))
         print()
-        writer.write(response.encode(self.encoding))
+        sys.stdout.flush()
+        writer.write(response)
         writer.flush()
 
     # XML-RPC alias
