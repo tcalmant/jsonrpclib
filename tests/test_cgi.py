@@ -15,7 +15,7 @@ import unittest
 try:
     from http.server import HTTPServer, CGIHTTPRequestHandler
 except ImportError:
-    from SimpleHTTPServer import HTTPServer
+    from BaseHTTPServer import HTTPServer
     from CGIHTTPServer import CGIHTTPRequestHandler
 
 # JSON-RPC library

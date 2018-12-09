@@ -26,6 +26,9 @@ CGI request handler.
     limitations under the License.
 """
 
+# We use print() in the CGI request handler
+from __future__ import print_function
+
 # Standard library
 import logging
 import socket
