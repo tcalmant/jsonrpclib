@@ -47,12 +47,13 @@ class PooledServerTests(unittest.TestCase):
         client = ServerProxy("http://localhost:{0}".format(port))
 
         # Check calls
-        for _ in range(10):
+        for _ in range(5):
             a, b = random.random(), random.random()
             result = client.add(a, b)
             self.assertEqual(result, a+b)
 
         # Close server
+        server.shutdown()
         server.server_close()
         thread.join()
 

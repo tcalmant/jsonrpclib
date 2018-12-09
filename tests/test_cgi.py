@@ -6,6 +6,8 @@ Tests the CGI request handler
 :license: Apache License 2.0
 """
 
+from __future__ import print_function
+
 # Standard library
 import os
 import random
@@ -53,13 +55,14 @@ class CGIHandlerTests(unittest.TestCase):
                 "http://localhost:{0}/cgi-bin/cgi_server.py".format(port)
             )
 
-            # Check calls
-            for _ in range(3):
+            # Check call
+            for _ in range(2):
                 a, b = random.random(), random.random()
                 result = client.add(a, b)
                 self.assertEqual(result, a + b)
 
             # Close server
+            server.shutdown()
             server.server_close()
             thread.join()
         finally:
