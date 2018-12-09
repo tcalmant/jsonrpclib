@@ -7,6 +7,10 @@ python:
 
 sudo: false
 
+env:
+  global:
+    - COVERAGE_PROCESS_START=".coveragerc"
+
 before_install:
   - pip install nose coverage coveralls
 

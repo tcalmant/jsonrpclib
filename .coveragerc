@@ -1,5 +1,6 @@
 [run]
 source = jsonrpclib/
+parallel = True
 
 [report]
 include = jsonrpclib/*
