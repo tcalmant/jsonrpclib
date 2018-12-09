@@ -41,6 +41,7 @@ try:
     # variant of this package.
     SimpleXMLRPCDispatcher = xmlrpcserver.SimpleXMLRPCDispatcher
     SimpleXMLRPCRequestHandler = xmlrpcserver.SimpleXMLRPCRequestHandler
+    CGIXMLRPCRequestHandler = xmlrpcserver.CGIXMLRPCRequestHandler
     resolve_dotted_attribute = xmlrpcserver.resolve_dotted_attribute
     import socketserver
 except (ImportError, AttributeError):
@@ -49,6 +50,7 @@ except (ImportError, AttributeError):
     import SimpleXMLRPCServer as xmlrpcserver
     SimpleXMLRPCDispatcher = xmlrpcserver.SimpleXMLRPCDispatcher
     SimpleXMLRPCRequestHandler = xmlrpcserver.SimpleXMLRPCRequestHandler
+    CGIXMLRPCRequestHandler = xmlrpcserver.CGIXMLRPCRequestHandler
     resolve_dotted_attribute = xmlrpcserver.resolve_dotted_attribute
     import SocketServer as socketserver
 
@@ -585,7 +587,7 @@ class PooledJSONRPCServer(SimpleJSONRPCServer, socketserver.ThreadingMixIn):
 # ------------------------------------------------------------------------------
 
 
-class CGIJSONRPCRequestHandler(SimpleJSONRPCDispatcher):
+class CGIJSONRPCRequestHandler(SimpleJSONRPCDispatcher, CGIXMLRPCRequestHandler):
     """
     JSON-RPC CGI handler (and dispatcher)
     """
@@ -597,17 +599,23 @@ class CGIJSONRPCRequestHandler(SimpleJSONRPCDispatcher):
         :param config: A JSONRPClib Config instance
         """
         SimpleJSONRPCDispatcher.__init__(self, encoding, config)
+        CGIXMLRPCRequestHandler.__init__(self)
 
     def handle_jsonrpc(self, request_text):
         """
         Handle a JSON-RPC request
         """
+        try:
+            writer = sys.stdout.buffer
+        except AttributeError:
+            writer = sys.stdout
+
         response = self._marshaled_dispatch(request_text)
-        sys.stdout.write('Content-Type: {0}\r\n'
-                         .format(self.json_config.content_type))
-        sys.stdout.write('Content-Length: {0:d}\r\n'.format(len(response)))
-        sys.stdout.write('\r\n')
-        sys.stdout.write(response)
+        print('Content-Type: {0}'.format(self.json_config.content_type))
+        print('Content-Length: {0:d}'.format(len(response)))
+        print()
+        writer.write(response.encode(self.encoding))
+        writer.flush()
 
     # XML-RPC alias
     handle_xmlrpc = handle_jsonrpc
