@@ -114,6 +114,18 @@ class InternalTests(unittest.TestCase):
         self.assertTrue(verify_request == request)
         self.assertTrue(verify_response == response)
 
+    def test_exception(self):
+        """
+        Tests the call to a method that will fail
+        """
+        client = self.get_client()
+        try:
+            client.fail()
+        except jsonrpclib.ProtocolError as ex:
+            self.assertIn("ValueError", str(ex))
+        else:
+            self.fail("Exception not raised")
+
     def test_multicall_success(self):
         """
         Multi-call test
