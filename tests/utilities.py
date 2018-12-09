@@ -6,11 +6,11 @@ Tests utility classes
 :license: Apache License 2.0
 """
 
-# JSON-RPC library
-from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
-
 # Standard library
 import threading
+
+# JSON-RPC library
+from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 
 # ------------------------------------------------------------------------------
 # Test methods
@@ -24,27 +24,52 @@ def subtract(minuend, subtrahend):
 
 
 def add(x, y):
+    """
+    Sample addition, positional arguments
+    """
     return x + y
 
 
 def update(*args):
+    """
+    Sample with a list of optional arguments (returns the list)
+    """
     return args
 
 
 def summation(*args):
+    """
+    Sample with a list of optional arguments (returns the sum of the arguments)
+    """
     return sum(args)
 
 
 def notify_hello(*args):
+    """
+    Sample with a list of optional arguments (returns the list), meant to be
+    called as a notification
+    """
     return args
 
 
 def get_data():
+    """
+    Returns a list with a string and an integer
+    """
     return ['hello', 5]
 
 
 def ping():
+    """
+    No argument, returns a boolean
+    """
     return True
+
+def fail():
+    """
+    No argument, raises an exception
+    """
+    raise ValueError("Everything I do fails")
 
 # ------------------------------------------------------------------------------
 # Server utility class
@@ -83,6 +108,7 @@ class UtilityServer(object):
         server.register_function(add)
         server.register_function(ping)
         server.register_function(summation, 'namespace.sum')
+        server.register_function(fail)
 
         # Serve in a thread
         self._thread = threading.Thread(target=server.serve_forever)
