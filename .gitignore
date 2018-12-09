@@ -18,6 +18,10 @@ __pycache__
 .coverage
 htmlcov/
 
+# Nosetests
+.noseids
+nosetests.xml
+
 # Development environment
 venv*/
 
