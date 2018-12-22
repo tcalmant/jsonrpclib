@@ -60,12 +60,14 @@ See https://github.com/tcalmant/jsonrpclib for more info.
 # Standard library
 import contextlib
 import logging
+import socket
 import sys
 import uuid
 
 try:
     # Python 3
     # pylint: disable=F0401,E0611
+    from http.client import HTTPConnection
     from urllib.parse import splittype, splithost
     from xmlrpc.client import Transport as XMLTransport
     from xmlrpc.client import SafeTransport as XMLSafeTransport
@@ -74,6 +76,7 @@ try:
 except ImportError:
     # Python 2
     # pylint: disable=F0401,E0611
+    from httplib import HTTPConnection
     from urllib import splittype, splithost
     from xmlrpclib import Transport as XMLTransport
     from xmlrpclib import SafeTransport as XMLSafeTransport
@@ -466,6 +469,60 @@ class SafeTransport(TransportMixIn, XMLSafeTransport):
 # ------------------------------------------------------------------------------
 
 
+class UnixHTTPConnection(HTTPConnection):
+    """
+    Replaces the connect() method of HTTPConnection to use a Unix socket
+    """
+    def __init__(self, path, *args, **kwargs):
+        """
+        Constructs the HTTP connection.
+
+        Forwards all given arguments except ``path`` to the constructor of
+        HTTPConnection
+
+        :param path: Path to the Unix socket
+        """
+        HTTPConnection.__init__(self, path, *args, **kwargs)
+        self.path = path
+
+    def connect(self):
+        """
+        Connects to the described server
+        """
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.connect(self.path)
+
+
+class UnixTransport(TransportMixIn, XMLTransport):
+    """
+    Mixed-in HTTP transport over a UNIX socket
+    """
+    def __init__(self, config):
+        TransportMixIn.__init__(self, config)
+        XMLTransport.__init__(self)
+
+    def make_connection(self, host):
+        """
+        Connect to server.
+
+        Return an existing connection if possible.
+        This allows HTTP/1.1 keep-alive.
+
+        Code copied from xmlrpc.client (Python 3)
+
+        :param host: Target host
+        :return A UnixHTTPConnection object
+        """
+        if self._connection and host == self._connection[0]:
+            return self._connection[1]
+        # create a HTTP connection object from a host descriptor
+        path, self._extra_headers, _ = self.get_host_info(host)
+        self._connection = host, UnixHTTPConnection(path)
+        return self._connection[1]
+
+# ------------------------------------------------------------------------------
+
+
 class ServerProxy(XMLServerProxy):
     """
     Unfortunately, much more of this class has to be copied since
@@ -492,6 +549,11 @@ class ServerProxy(XMLServerProxy):
         self.__version = version or config.version
 
         schema, uri = splittype(uri)
+        use_unix = False
+        if schema.startswith("unix+"):
+            schema = schema[len("unix+"):]
+            use_unix = True
+
         if schema not in ('http', 'https'):
             _logger.error("jsonrpclib only support http(s) URIs, not %s",
                           schema)
@@ -503,10 +565,20 @@ class ServerProxy(XMLServerProxy):
             self.__handler = '/'
 
         if transport is None:
-            if schema == 'https':
+            if use_unix:
+                if schema == "http":
+                    transport = UnixTransport(config=config)
+            elif schema == 'https':
                 transport = SafeTransport(config=config, context=context)
             else:
                 transport = Transport(config=config)
+
+            if transport is None:
+                raise IOError(
+                    "Unhandled combination: UNIX={}, protocol={}"
+                    .format(use_unix, schema)
+                )
+
         self.__transport = transport
 
         self.__encoding = encoding
