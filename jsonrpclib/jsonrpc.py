@@ -877,7 +877,10 @@ class MultiCallIterator(object):
         """
         for item in self.results:
             yield self.__get_result(item)
-        raise StopIteration
+
+        # Since Python 3.7, we must return instead of raising a StopIteration
+        # (see PEP-479)
+        return
 
     def __getitem__(self, i):
         """
