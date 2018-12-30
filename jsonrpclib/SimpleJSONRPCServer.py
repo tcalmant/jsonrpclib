@@ -65,6 +65,13 @@ except ImportError:
     # pylint: disable=C0103
     fcntl = None
 
+try:
+    # Python with support for Unix socket
+    _AF_UNIX = socket.AF_UNIX
+except AttributeError:
+    # Unix sockets are not supported, use a dummy value
+    _AF_UNIX = -1
+
 # Local modules
 from jsonrpclib import Fault
 import jsonrpclib.config
@@ -506,11 +513,21 @@ class SimpleJSONRPCServer(socketserver.TCPServer, SimpleJSONRPCDispatcher):
         # Set up the dispatcher fields
         SimpleJSONRPCDispatcher.__init__(self, encoding, config)
 
+        # Flag to ease handling of Unix socket mode
+        unix_socket = address_family == _AF_UNIX
+
+        # Disable the reuse address flag when in Unix socket mode, or an
+        # exception will raise when binding the socket
+        self.allow_reuse_address = self.allow_reuse_address and not unix_socket
+
         # Prepare the server configuration
-        # logRequests is used by SimpleXMLRPCRequestHandler
-        self.logRequests = logRequests
         self.address_family = address_family
         self.json_config = config
+
+        # logRequests is used by SimpleXMLRPCRequestHandler
+        # This must be disabled in Unix socket mode (or an exception will raise
+        # at each connection)
+        self.logRequests = logRequests and not unix_socket
 
         # Work on the request handler
         class RequestHandlerWrapper(requestHandler, object):
@@ -522,6 +539,12 @@ class SimpleJSONRPCServer(socketserver.TCPServer, SimpleJSONRPCDispatcher):
                 Constructs the wrapper after having stored the configuration
                 """
                 self.config = config
+
+                if unix_socket:
+                    # Disable TCP features over Unix socket, or an
+                    # "invalid argument" error will raise
+                    self.disable_nagle_algorithm = False
+
                 super(RequestHandlerWrapper, self).__init__(*args, **kwargs)
 
         # Set up the server
