@@ -302,7 +302,7 @@ class ThreadPoolTest(unittest.TestCase):
 
     def testPreStartEnqueue(self):
         """
-        Tests the late start of the poll
+        Tests the late start of the pool
         """
         self.pool = threadpool.ThreadPool(1)
         result = object()
@@ -344,7 +344,7 @@ class ThreadPoolTest(unittest.TestCase):
 
     def testPreRestartEnqueue(self):
         """
-        Tests the restart of the poll
+        Tests the restart of the pool
         """
         self.pool = threadpool.ThreadPool(1)
         result = object()
