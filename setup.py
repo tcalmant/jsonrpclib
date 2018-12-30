@@ -41,6 +41,10 @@ except ImportError:
 
 # ------------------------------------------------------------------------------
 
+# Read the description file
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 setup(
     name="jsonrpclib-pelix",
     version=__version__,
@@ -52,7 +56,8 @@ setup(
     "specification (backwards-compatible) as a client library, for Python 2.7 "
     "and Python 3. This version is a fork of jsonrpclib by Josh Marshall, "
     "made to be also usable with Pelix/iPOPO remote services.",
-    long_description=open("README.rst").read(),
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     packages=["jsonrpclib"],
     test_suite="tests",
     classifiers=[
