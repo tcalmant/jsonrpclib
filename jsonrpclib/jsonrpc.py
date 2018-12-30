@@ -60,6 +60,7 @@ See https://github.com/tcalmant/jsonrpclib for more info.
 # Standard library
 import contextlib
 import logging
+import os
 import socket
 import sys
 import uuid
@@ -497,9 +498,15 @@ class UnixTransport(TransportMixIn, XMLTransport):
     """
     Mixed-in HTTP transport over a UNIX socket
     """
-    def __init__(self, config):
+    def __init__(self, config, path=None):
+        """
+        :param config: The jsonrpclib configuration
+        :param path: Path to the Unix socket (overrides the host name later)
+        """
         TransportMixIn.__init__(self, config)
         XMLTransport.__init__(self)
+        # Keep track of the given path, if any
+        self.__unix_path = os.path.abspath(path) if path else None
 
     def make_connection(self, host):
         """
@@ -510,11 +517,15 @@ class UnixTransport(TransportMixIn, XMLTransport):
 
         Code copied from xmlrpc.client (Python 3)
 
-        :param host: Target host
+        :param host: Target host (ignored if a path was given)
         :return A UnixHTTPConnection object
         """
+        if self.__unix_path:
+            host = self.__unix_path
+
         if self._connection and host == self._connection[0]:
             return self._connection[1]
+
         # create a HTTP connection object from a host descriptor
         path, self._extra_headers, _ = self.get_host_info(host)
         self._connection = host, UnixHTTPConnection(path)
@@ -560,14 +571,21 @@ class ServerProxy(XMLServerProxy):
             raise IOError('Unsupported JSON-RPC protocol.')
 
         self.__host, self.__handler = splithost(uri)
-        if not self.__handler:
+        if use_unix:
+            unix_path = self.__handler
+            self.__handler = '/'
+        elif not self.__handler:
             # Not sure if this is in the JSON spec?
             self.__handler = '/'
 
         if transport is None:
             if use_unix:
                 if schema == "http":
-                    transport = UnixTransport(config=config)
+                    # In Unix mode, we use the path part of the URL (handler)
+                    # as the path to the socket file
+                    transport = UnixTransport(
+                        config=config, path=unix_path
+                    )
             elif schema == 'https':
                 transport = SafeTransport(config=config, context=context)
             else:
