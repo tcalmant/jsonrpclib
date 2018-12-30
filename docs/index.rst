@@ -1,13 +1,24 @@
 Welcome to JSONRPClib-pelix
 ###########################
 
-This library is an implementation of the JSON-RPC specification.
-It supports both the original 1.0 specification, as well as the
-new (proposed) 2.0 specification, which includes batch submission, keyword
-arguments, etc.
+This library implements the JSON-RPC 2.0 proposed specification in pure Python.
+It is designed to be as compatible with the syntax of ``xmlrpclib`` as possible
+(it extends where possible), so that projects using ``xmlrpclib`` could easily
+be modified to use JSON and experiment with the differences.
 
-It is licensed under the
-`Apache License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>`_.
+It is backwards-compatible with the 1.0 specification, and supports all of the
+new proposed features of 2.0, including:
+
+* Batch submission (via the ``MultiCall`` class)
+* Keyword arguments
+* Notifications (both in a batch and *normal*)
+* Class translation using the ``__jsonclass__`` key.
+
+A ``SimpleJSONRPCServer`` class has been added. It is intended to emulate the
+``SimpleXMLRPCServer`` from the default Python distribution.
+
+This library is licensed under the terms of the
+`Apache Software License 2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>`_.
 
 .. toctree::
    :maxdepth: 2
@@ -68,7 +79,6 @@ Services, but it is **not** a Pelix specific implementation.
 
     * Custom headers can be sent with request and associated tests
 
-* The support for Unix sockets has been removed, as it is not trivial to convert
-  to Python 3 (and I don't use them)
+* Since version 0.4, this package added back the support of Unix sockets.
 * This version cannot be installed with the original ``jsonrpclib``, as it uses
   the same package name.

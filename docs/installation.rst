@@ -7,10 +7,10 @@ Requirements
 ************
 
 It supports ``cjson`` and ``simplejson``, and looks for the parsers in that
-order (searching first for ``cjson``, then for the *built-in* ``json`` in 2.7,
+order (searching first for ``cjson``, then for the *built-in* ``json`` in 2.7+,
 and then the ``simplejson`` external library).
 One of these must be installed to use this library, although if you have a
-standard distribution of 2.7, you should already have one.
+standard distribution of 2.7+, you should already have one.
 Keep in mind that ``cjson`` is supposed to be the quickest, I believe, so if
 you are going for full-on optimization you may want to pick it up.
 
@@ -22,7 +22,11 @@ You can install the latest stable version from PyPI with the following command:
 
 .. code-block:: console
 
+   # Global installation
    pip install jsonrpclib-pelix
+
+   # Local installation
+   pip install --user jsonrpclib-pelix
 
 Alternatively, you can install the latest development version:
 

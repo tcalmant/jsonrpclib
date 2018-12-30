@@ -3,25 +3,26 @@
 Class Translation
 *****************
 
-I've recently added "automatic" class translation support, although it is
-turned off by default. This can be devastatingly slow if improperly used, so
-the following is just a short list of things to keep in mind when using it.
+The library supports an *"automatic"* class translation process, although it
+is turned off by default.
+This can be devastatingly slow if improperly used, so the following is just a
+short list of things to keep in mind when using it.
 
-* Keep It (the object) Simple Stupid. (for exceptions, keep reading.)
+* Keep It (the object) Simple Stupid. (for exceptions, keep reading)
 * Do not require init params (for exceptions, keep reading)
 * Getter properties without setters could be dangerous (read: not tested)
 
-If any of the above are issues, use the _serialize method. (see usage below)
-The server and client must BOTH have use_jsonclass configuration item on and
-they must both have access to the same libraries used by the objects for
-this to work.
+If any of the above are issues, use the ``_serialize`` method. (see usage below)
+The server and client must **BOTH** have ``use_jsonclass`` configuration
+item on and they must both have access to the same libraries used by the
+objects for this to work.
 
 If you have excessively nested arguments, it would be better to turn off the
 translation and manually invoke it on specific objects using
 ``jsonrpclib.jsonclass.dump`` / ``jsonrpclib.jsonclass.load`` (since the default
 behavior recursively goes through attributes and lists / dicts / tuples).
 
- Sample file: *test_obj.py*
+* Sample file: ``test_obj.py``
 
 .. code-block:: python
 
@@ -40,7 +41,7 @@ behavior recursively goes through attributes and lists / dicts / tuples).
        def _serialize(self):
            return (self.args, {'foo':self.foo,})
 
-* Sample usage
+* Sample usage:
 
 .. code-block:: python
 
@@ -66,12 +67,14 @@ behavior recursively goes through attributes and lists / dicts / tuples).
    {"id": "7805f1f9-9abd-49c6-81dc-dbd47229fe13", "jsonrpc": "2.0",
     "result": {"__jsonclass__": ["test_obj.TestSerial", []], "foo": "bar"}}
 
-This behavior is turned by default. To deactivate it, just set the
-``use_jsonclass`` member of a server ``Config`` to False.
+This behavior is turned on by default.
+To deactivate it, just set the ``use_jsonclass`` member of a server ``Config``
+to ``False``.
 If you want to use a per-class serialization method, set its name in the
 ``serialize_method`` member of a server ``Config``.
 Finally, if you are using classes that you have defined in the implementation
-(as in, not a separate library), you'll need to add those (on BOTH the server
-and the client) using the ``config.classes.add()`` method.
+(as in, not a separate library), you'll need to add those
+(on **BOTH** the server and the client) using the ``config.classes.add()``
+method.
 
 Feedback on this "feature" is very, VERY much appreciated.

@@ -3,12 +3,13 @@
 Simple JSON-RPC Server
 **********************
 
-This is identical in usage (or should be) to the SimpleXMLRPCServer in the
+This is identical in usage (or should be) to the ``SimpleXMLRPCServer`` in the
 Python standard library. Some of the differences in features are that it
 obviously supports notification, batch calls, class translation (if left on),
 etc.
-Note: The import line is slightly different from the regular SimpleXMLRPCServer,
-since the SimpleJSONRPCServer is distributed within the ``jsonrpclib`` library.
+Note: The import line is slightly different from the regular
+``SimpleXMLRPCServer``, since the ``SimpleJSONRPCServer`` is provided by the
+``jsonrpclib`` library.
 
 .. code-block:: python
 
@@ -115,28 +116,44 @@ with a request pool doesn't have a notification pool.
        nofif_pool.stop()
        server.set_notification_pool(None)
 
+Unix Socket
+===========
 
-Additional headers
-==================
-
-If your remote service requires custom headers in request, you can pass them
-as as a ``headers`` keyword argument, when creating the ``ServerProxy``:
-
-.. code-block:: python
-
-   >>> import jsonrpclib
-   >>> server = jsonrpclib.ServerProxy("http://localhost:8080",
-                                       headers={'X-Test' : 'Test'})
-
-You can also put additional request headers only for certain method invocation:
+To start a server listening on a Unix socket, you will have to use the
+following snippet:
 
 .. code-block:: python
 
-   >>> import jsonrpclib
-   >>> server = jsonrpclib.Server("http://localhost:8080")
-   >>> with server._additional_headers({'X-Test' : 'Test'}) as test_server:
-   ...     test_server.ping(42)
-   ...
-   >>> # X-Test header will be no longer sent in requests
+   from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
+   import os
+   import socket
 
-Of course ``_additional_headers`` contexts can be nested as well.
+   # Set the path to the socket file
+   socket_name = "/tmp/my_socket.socket"
+
+   # Ensure that the file doesn't exist yet (or an error will be raised)
+   if os.path.exists(socket_name):
+      os.remove(socket_name)
+
+   try:
+      # Start the server, indicating the socket family
+      # The server will force some flags when in Unix socket mode
+      # (no log request, no reuse address, ...)
+      srv = SimpleJSONRPCServer(socket_name, address_family=socket.AF_UNIX)
+
+      # ... register methods to the server
+      # Run the server
+      srv.serve_forever()
+   except KeyboardInterrupt:
+      # Shutdown the server gracefully
+      srv.shutdown()
+      srv.server_close()
+   finally:
+      # You should clean up after the server stopped
+      os.remove(socket_name)
+
+This feature is tested on Linux during Travis-CI builds. It also has
+been tested on Windows Subsystem for Linux (WSL) on Windows 10 1809.
+
+This feature is not available on "pure" Windows, as it doesn't provide
+the ``AF_UNIX`` address family.

@@ -73,6 +73,50 @@ compatibility, and ``notify`` if it's a request that you want to be a
 notification.
 
 Additionally, the ``loads`` method does not return the params and method like
-``xmlrpclib``, but instead a.) parses for errors, raising ProtocolErrors, and
+``xmlrpclib``, but instead
+a.) parses for errors, raising ProtocolErrors, and
 b.) returns the entire structure of the request / response for manual parsing.
 
+Unix Socket
+===========
+
+To connect a JSON-RPC server over a Unix socket, you have to use a specific
+protocol: ``unix+http``.
+
+When connecting to a Unix socket in the current working directory, you can use
+the following syntax: ``unix+http://my.socket``
+
+When you need to give an absolute path you must use the path part of the URL,
+the host part will be ignored. For example, you can use this URL to indicate a
+Unix socket in ``/var/lib/daemon.socket``:
+``unix+http://./var/lib/daemon.socket``
+
+**Note:** Currently, only HTTP is supported over a Unix socket.
+If you want HTTPS support to be implemented, please create an
+`issue on GitHub <https://github.com/tcalmant/jsonrpclib/issues>`_.
+
+
+Additional headers
+==================
+
+If your remote service requires custom headers in request, you can pass them
+as as a ``headers`` keyword argument, when creating the ``ServerProxy``:
+
+.. code-block:: python
+
+   >>> import jsonrpclib
+   >>> server = jsonrpclib.ServerProxy("http://localhost:8080",
+                                       headers={'X-Test' : 'Test'})
+
+You can also put additional request headers only for certain method invocation:
+
+.. code-block:: python
+
+   >>> import jsonrpclib
+   >>> server = jsonrpclib.ServerProxy("http://localhost:8080")
+   >>> with server._additional_headers({'X-Test' : 'Test'}) as test_server:
+   ...     test_server.ping(42)
+   ...
+   >>> # X-Test header will be no longer sent in requests
+
+Of course ``_additional_headers`` contexts can be nested as well.
