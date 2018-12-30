@@ -387,7 +387,7 @@ translation and manually invoke it on specific objects using
 `jsonrpclib.jsonclass.dump` / `jsonrpclib.jsonclass.load` (since the
 default behavior recursively goes through attributes and lists/dicts/tuples).
 
-> Sample file: `test_obj.py`
+* Sample file: `test_obj.py`
 
 ```python
 # This object is /very/ simple, and the system will look through the
