@@ -36,6 +36,8 @@ The suffix *-pelix* only indicates that this version works with Pelix Remote
 Services, but it is **not** a Pelix specific implementation.
 
 * This version adds support for Python 3, staying compatible with Python 2.7.
+  The support for Python 2.6 has been dropped, as it was becoming to hard to
+  maintain.
 * It is now possible to use the dispatch_method argument while extending
   the SimpleJSONRPCDispatcher, to use a custom dispatcher.
   This allows to use this package by Pelix Remote Services.
@@ -57,10 +59,9 @@ Services, but it is **not** a Pelix specific implementation.
 
     * Custom headers can be sent with request and associated tests
 
-* The support for Unix sockets has been removed, as it is not trivial to convert
-  to Python 3 (and I don't use them)
-* This version cannot be installed with the original ``jsonrpclib``, as it uses
-  the same package name.
+* Since version 0.4, this package added back the support of Unix sockets.
+* This package cannot be installed with the original ``jsonrpclib``, as it uses
+  the same name.
 
 
 Summary
@@ -232,6 +233,47 @@ with a request pool doesn't have a notification pool.
        nofif_pool.stop()
        server.set_notification_pool(None)
 
+
+Unix socket
+===========
+
+To start a server listening on a Unix socket, you will have to use the following
+snippet:
+
+.. code-block:: python
+
+   # Set the path to the socket file
+   socket_name = "/tmp/my_socket.socket"
+
+   # Ensure that the file doesn't exist yet (or an error will be raised)
+   if os.path.exists(socket_name):
+      os.remove(socket_name)
+
+   try:
+      # Start the server, indicating the socket family
+      # The server will force some flags when in Unix socket mode
+      # (no log request, no reuse address, ...)
+      srv = SimpleJSONRPCServer(socket_name, address_family=socket.AF_UNIX)
+
+      # ... register methods to the server
+      # Run the server
+      srv.serve_forever()
+   except KeyboardInterrupt:
+      # Shutdown the server gracefully
+      srv.shutdown()
+      srv.server_close()
+   finally:
+      # You should clean up after the server stopped
+      os.remove(socket_name)
+
+
+This feature is tested on Linux during Travis-CI builds.
+It also has been tested on Windows Subsystem for Linux (WSL) on Windows 10 1809.
+
+This feature is not available on "pure" Windows, as it doesn't provide the
+``AF_UNIX`` address family.
+
+
 Client Usage
 ************
 
@@ -307,6 +349,25 @@ notification.
 Additionally, the ``loads`` method does not return the params and method like
 ``xmlrpclib``, but instead a.) parses for errors, raising ProtocolErrors, and
 b.) returns the entire structure of the request / response for manual parsing.
+
+
+Unix sockets
+============
+
+To connect a JSON-RPC server over a Unix socket, you have to use a specific URL
+protocol: ``unix+http``.
+
+When connecting to a Unix socket in the current working directory, you can use
+the following syntax: ``unix+http://my.socket``
+
+When you need to give an absolute path you must use the path part of the URL,
+the host part will be ignored.
+For example, you can use this URL to indicate a Unix socket in
+``/var/lib/daemon.socket``: ``unix+http://./var/lib/daemon.socket``
+
+**Note:** Currently, only HTTP is supported over a Unix socket.
+If you want HTTPS support to be implemented, please create an issue on GitHub:
+https://github.com/tcalmant/jsonrpclib/issues
 
 
 Additional headers
