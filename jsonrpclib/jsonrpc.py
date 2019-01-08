@@ -465,7 +465,15 @@ class SafeTransport(TransportMixIn, XMLSafeTransport):
     """
     def __init__(self, config, context):
         TransportMixIn.__init__(self, config, context)
-        XMLSafeTransport.__init__(self)
+        try:
+            # Give the context to XMLSafeTransport, to avoid it setting the
+            # context to None.
+            # See https://github.com/tcalmant/jsonrpclib/issues/39
+            XMLSafeTransport.__init__(self, context=context)
+        except TypeError:
+            # On old versions of Python (Pre-2014), the context argument
+            # wasn't available
+            XMLSafeTransport.__init__(self)
 
 # ------------------------------------------------------------------------------
 
