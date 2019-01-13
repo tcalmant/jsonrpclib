@@ -5,13 +5,13 @@ Defines a request dispatcher, a HTTP request handler, a HTTP server and a
 CGI request handler.
 
 :authors: Josh Marshall, Thomas Calmant
-:copyright: Copyright 2018, Thomas Calmant
+:copyright: Copyright 2019, Thomas Calmant
 :license: Apache License 2.0
 :version: 0.4.0
 
 ..
 
-    Copyright 2018 Thomas Calmant
+    Copyright 2019 Thomas Calmant
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
