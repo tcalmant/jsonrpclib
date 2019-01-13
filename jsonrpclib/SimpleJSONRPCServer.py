@@ -397,8 +397,9 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
             except:
                 # Method exception
                 err_lines = traceback.format_exception(*sys.exc_info())
-                trace_string = '{0} | {1}'.format(err_lines[-2].splitlines()[0].strip(), err_lines[-1])
-                fault = Fault(-32603, 'Server error: {0}'.format(trace_string),
+                trace_string = "{0} | {1}".format(
+                    err_lines[-2].splitlines()[0].strip(), err_lines[-1])
+                fault = Fault(-32603, "Server error: {0}".format(trace_string),
                               config=config)
                 _logger.exception("Server-side exception: %s", fault)
                 return fault
@@ -464,8 +465,9 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
             # Exception: send 500 Server Error
             self.send_response(500)
             err_lines = traceback.format_exception(*sys.exc_info())
-            trace_string = '{0} | {1}'.format(err_lines[-2].splitlines()[0].strip(), err_lines[-1])
-            fault = jsonrpclib.Fault(-32603, 'Server error: {0}'
+            trace_string = "{0} | {1}".format(
+                err_lines[-2].splitlines()[0].strip(), err_lines[-1])
+            fault = jsonrpclib.Fault(-32603, "Server error: {0}"
                                      .format(trace_string), config=config)
             _logger.exception("Server-side error: %s", fault)
             response = fault.response()
