@@ -27,6 +27,11 @@ This library is licensed under the terms of the
    client
    server
    class_translation
+
+.. toctree::
+   :maxdepth: 1
+
+   changelog
    license
 
 
