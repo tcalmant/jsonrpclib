@@ -114,9 +114,9 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
                 raw_chunk = self.rfile.read(chunk_size)
                 if not raw_chunk:
                     break
-                chunks.append(utils.from_bytes(raw_chunk))
+                chunks.append(raw_chunk)
                 size_remaining -= len(chunks[-1])
-            data = ''.join(chunks)
+            data = utils.from_bytes(b''.join(chunks))
 
             try:
                 # Decode content
