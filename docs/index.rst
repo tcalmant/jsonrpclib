@@ -26,6 +26,7 @@ This library is licensed under the terms of the
    installation
    client
    server
+   server_async
    class_translation
 
 .. toctree::
