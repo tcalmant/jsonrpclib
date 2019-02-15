@@ -32,3 +32,7 @@ venv*/
 build/*
 dist/*
 *.egg-info/
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints/
