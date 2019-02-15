@@ -1,4 +1,5 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
+# -- Content-Encoding: UTF-8 --
 """
 Implementation of the JSON-RPC server-side protocol
 
@@ -77,10 +78,10 @@ def get_version(request):
     :param request: A request dictionary
     :return: The JSON-RPC version or None
     """
-    if 'jsonrpc' in request:
+    if "jsonrpc" in request:
         return 2.0
 
-    if 'id' in request:
+    if "id" in request:
         return 1.0
 
     return None
@@ -97,41 +98,55 @@ def validate_request(request, json_config):
     """
     if not isinstance(request, utils.DictType):
         # Invalid request type
-        fault = Fault(-32600, 'Request must be a dict, not {0}'
-                      .format(type(request).__name__),
-                      config=json_config)
+        fault = Fault(
+            -32600,
+            "Request must be a dict, not {0}".format(type(request).__name__),
+            config=json_config,
+        )
         _logger.warning("Invalid request content: %s", fault)
         return fault
 
     # Get the request ID
-    rpcid = request.get('id', None)
+    rpcid = request.get("id", None)
 
     # Check request version
     version = get_version(request)
     if not version:
-        fault = Fault(-32600, 'Request {0} invalid.'.format(request),
-                      rpcid=rpcid, config=json_config)
+        fault = Fault(
+            -32600,
+            "Request {0} invalid.".format(request),
+            rpcid=rpcid,
+            config=json_config,
+        )
         _logger.warning("No version in request: %s", fault)
         return fault
 
     # Default parameters: empty list
-    request.setdefault('params', [])
+    request.setdefault("params", [])
 
     # Check parameters
-    method = request.get('method', None)
-    params = request.get('params')
+    method = request.get("method", None)
+    params = request.get("params")
     param_types = (utils.ListType, utils.DictType, utils.TupleType)
 
-    if not method or not isinstance(method, utils.STRING_TYPES) or \
-            not isinstance(params, param_types):
+    if (
+        not method
+        or not isinstance(method, utils.STRING_TYPES)
+        or not isinstance(params, param_types)
+    ):
         # Invalid type of method name or parameters
-        fault = Fault(-32600, 'Invalid request parameters or method.',
-                      rpcid=rpcid, config=json_config)
+        fault = Fault(
+            -32600,
+            "Invalid request parameters or method.",
+            rpcid=rpcid,
+            config=json_config,
+        )
         _logger.warning("Invalid request content: %s", fault)
         return fault
 
     # Valid request
     return True
+
 
 # ------------------------------------------------------------------------------
 
@@ -166,6 +181,19 @@ class JsonRpcProtocolHandler(xmlrpcserver.SimpleXMLRPCDispatcher, object):
         """
         self.__notification_pool = thread_pool
 
+    def make_fault(self, code, message, config=None):
+        # type: (int, str, jsonrpclib.config.Config) -> Fault
+        """
+        Construct a Fault object, using the configuration of this protocol
+        handler if no custom one is given
+
+        :param code: Error code (should be negative)
+        :param message: Message string
+        :param config: Custom protocol configuration for the response
+        :return: A Fault object
+        """
+        return Fault(code, message, config=config or self.json_config)
+
     def _marshaled_dispatch(self, data, dispatch_method=None, path=None):
         # type: (str, Optional[DispatchMethod], Optional[str]) -> Optional[str]
         """
@@ -181,7 +209,8 @@ class JsonRpcProtocolHandler(xmlrpcserver.SimpleXMLRPCDispatcher, object):
     def marshaled_dispatch(self, data, dispatch_method=None):
         # type: (str, Optional[DispatchMethod]) -> Optional[str]
         """
-        Overrides the XML-RPC dispatcher method. Calls handle_request_str().
+        Handle the JSON-RPC request (given as a string) and returns the
+        JSON-RPC response as a string.
 
         :param data: A JSON request string
         :param dispatch_method: Custom dispatch method (for method resolution)
@@ -208,12 +237,11 @@ class JsonRpcProtocolHandler(xmlrpcserver.SimpleXMLRPCDispatcher, object):
             request = jsonrpclib.loads(json_str, self.json_config)
         except (ValueError, IOError, TypeError) as ex:
             # Parsing/loading error: return a JSON response
-            fault = Fault(
+            fault = self.make_fault(
                 -32700,
                 "Request {0} invalid. ({1}:{2})".format(
                     json_str, type(ex).__name__, ex
                 ),
-                config=self.json_config,
             )
             return fault.dump()
 
@@ -239,10 +267,8 @@ class JsonRpcProtocolHandler(xmlrpcserver.SimpleXMLRPCDispatcher, object):
         """
         if not request:
             # Invalid request dictionary
-            fault = Fault(
-                -32600,
-                "Request invalid -- no request data.",
-                config=self.json_config,
+            fault = self.make_fault(
+                -32600, "Request invalid -- no request data."
             )
             _logger.warning("Invalid request: %s", fault)
             return fault.dump()
@@ -359,6 +385,36 @@ class JsonRpcProtocolHandler(xmlrpcserver.SimpleXMLRPCDispatcher, object):
             _logger.error("Error preparing JSON-RPC result: %s", fault)
             return fault.dump()
 
+    def _resolve_method(self, method, params):
+        # type: (str, ParamsList) -> Optional[Callable]
+        """
+        Returns the method matching the given name
+
+        :param method: A method name
+        :param params: Parameters of the method (given to the sub-dispatcher)
+        :return: The method to call or None
+        """
+        try:
+            # Look into registered methods
+            return self.funcs[method]
+        except KeyError:
+            if self.instance is not None:
+                # Try with the registered instance
+                try:
+                    # Instance has a custom dispatcher
+                    return getattr(self.instance, "_dispatch")(method, params)
+                except AttributeError:
+                    # Resolve the method name in the instance
+                    try:
+                        return resolve_dotted_attribute(
+                            self.instance, method, True
+                        )
+                    except AttributeError:
+                        # Unknown method
+                        pass
+
+        return None
+
     def _dispatch(self, method, params, config=None):
         # type: (str, ParamsList, Optional[jsonrpclib.config.Config]) -> Any
         """
@@ -371,26 +427,7 @@ class JsonRpcProtocolHandler(xmlrpcserver.SimpleXMLRPCDispatcher, object):
         """
         config = config or self.json_config
 
-        func = None
-        try:
-            # Look into registered methods
-            func = self.funcs[method]
-        except KeyError:
-            if self.instance is not None:
-                # Try with the registered instance
-                try:
-                    # Instance has a custom dispatcher
-                    return getattr(self.instance, "_dispatch")(method, params)
-                except AttributeError:
-                    # Resolve the method name in the instance
-                    try:
-                        func = resolve_dotted_attribute(
-                            self.instance, method, True
-                        )
-                    except AttributeError:
-                        # Unknown method
-                        pass
-
+        func = self._resolve_method(method, params)
         if func is not None:
             try:
                 # Call the method
@@ -402,8 +439,8 @@ class JsonRpcProtocolHandler(xmlrpcserver.SimpleXMLRPCDispatcher, object):
                 return func(**params)
             except TypeError as ex:
                 # Maybe the parameters are wrong
-                fault = Fault(
-                    -32602, "Invalid parameters: {0}".format(ex), config=config
+                fault = self.make_fault(
+                    -32602, "Invalid parameters: {0}".format(ex), config
                 )
                 _logger.warning("Invalid call parameters: %s", fault)
                 return fault
@@ -413,19 +450,15 @@ class JsonRpcProtocolHandler(xmlrpcserver.SimpleXMLRPCDispatcher, object):
                 trace_string = "{0} | {1}".format(
                     err_lines[-2].splitlines()[0].strip(), err_lines[-1]
                 )
-                fault = Fault(
-                    -32603,
-                    "Server error: {0}".format(trace_string),
-                    config=config,
+                fault = self.make_fault(
+                    -32603, "Server error: {0}".format(trace_string), config
                 )
                 _logger.exception("Server-side exception: %s", fault)
                 return fault
 
         # Unknown method
-        fault = Fault(
-            -32601,
-            "Method {0} not supported.".format(method),
-            config=config,
+        fault = self.make_fault(
+            -32601, "Method {0} not supported.".format(method), config
         )
         _logger.warning("Unknown method: %s", fault)
         return fault
