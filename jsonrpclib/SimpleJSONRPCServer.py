@@ -39,23 +39,15 @@ try:
     # Python 3
     # pylint: disable=F0401,E0611
     import xmlrpc.server as xmlrpcserver
-    # Make sure the module is complete.
-    # The "future" package under python2.7 provides an incomplete
-    # variant of this package.
-    SimpleXMLRPCDispatcher = xmlrpcserver.SimpleXMLRPCDispatcher
-    SimpleXMLRPCRequestHandler = xmlrpcserver.SimpleXMLRPCRequestHandler
-    CGIXMLRPCRequestHandler = xmlrpcserver.CGIXMLRPCRequestHandler
-    resolve_dotted_attribute = xmlrpcserver.resolve_dotted_attribute
     import socketserver
 except (ImportError, AttributeError):
     # Python 2 or IronPython
     # pylint: disable=F0401,E0611
     import SimpleXMLRPCServer as xmlrpcserver
-    SimpleXMLRPCDispatcher = xmlrpcserver.SimpleXMLRPCDispatcher
-    SimpleXMLRPCRequestHandler = xmlrpcserver.SimpleXMLRPCRequestHandler
-    CGIXMLRPCRequestHandler = xmlrpcserver.CGIXMLRPCRequestHandler
-    resolve_dotted_attribute = xmlrpcserver.resolve_dotted_attribute
     import SocketServer as socketserver
+
+SimpleXMLRPCRequestHandler = xmlrpcserver.SimpleXMLRPCRequestHandler
+CGIXMLRPCRequestHandler = xmlrpcserver.CGIXMLRPCRequestHandler
 
 try:
     # Windows
@@ -74,6 +66,7 @@ except AttributeError:
 
 # Local modules
 from jsonrpclib import Fault
+from jsonrpclib.server_protocol import JsonRpcProtocolHandler, NoMulticallResult
 import jsonrpclib.config
 import jsonrpclib.utils as utils
 import jsonrpclib.threadpool
@@ -89,326 +82,6 @@ __docformat__ = "restructuredtext en"
 
 # Prepare the logger
 _logger = logging.getLogger(__name__)
-
-# ------------------------------------------------------------------------------
-
-
-def get_version(request):
-    """
-    Computes the JSON-RPC version
-
-    :param request: A request dictionary
-    :return: The JSON-RPC version or None
-    """
-    if 'jsonrpc' in request:
-        return 2.0
-    elif 'id' in request:
-        return 1.0
-
-    return None
-
-
-def validate_request(request, json_config):
-    """
-    Validates the format of a request dictionary
-
-    :param request: A request dictionary
-    :param json_config: A JSONRPClib Config instance
-    :return: True if the dictionary is valid, else a Fault object
-    """
-    if not isinstance(request, utils.DictType):
-        # Invalid request type
-        fault = Fault(-32600, 'Request must be a dict, not {0}'
-                      .format(type(request).__name__),
-                      config=json_config)
-        _logger.warning("Invalid request content: %s", fault)
-        return fault
-
-    # Get the request ID
-    rpcid = request.get('id', None)
-
-    # Check request version
-    version = get_version(request)
-    if not version:
-        fault = Fault(-32600, 'Request {0} invalid.'.format(request),
-                      rpcid=rpcid, config=json_config)
-        _logger.warning("No version in request: %s", fault)
-        return fault
-
-    # Default parameters: empty list
-    request.setdefault('params', [])
-
-    # Check parameters
-    method = request.get('method', None)
-    params = request.get('params')
-    param_types = (utils.ListType, utils.DictType, utils.TupleType)
-
-    if not method or not isinstance(method, utils.STRING_TYPES) or \
-            not isinstance(params, param_types):
-        # Invalid type of method name or parameters
-        fault = Fault(-32600, 'Invalid request parameters or method.',
-                      rpcid=rpcid, config=json_config)
-        _logger.warning("Invalid request content: %s", fault)
-        return fault
-
-    # Valid request
-    return True
-
-# ------------------------------------------------------------------------------
-
-
-class NoMulticallResult(Exception):
-    """
-    No result in multicall
-    """
-    pass
-
-
-class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
-    """
-    Mix-in class that dispatches JSON-RPC requests.
-
-    This class is used to register JSON-RPC method handlers
-    and then to dispatch them. This class doesn't need to be
-    instanced directly when used by SimpleJSONRPCServer.
-    """
-    def __init__(self, encoding=None, config=jsonrpclib.config.DEFAULT):
-        """
-        Sets up the dispatcher with the given encoding.
-        None values are allowed.
-        """
-        SimpleXMLRPCDispatcher.__init__(
-            self, allow_none=True, encoding=encoding or "UTF-8")
-        self.json_config = config
-
-        # Notification thread pool
-        self.__notification_pool = None
-
-    def set_notification_pool(self, thread_pool):
-        """
-        Sets the thread pool to use to handle notifications
-        """
-        self.__notification_pool = thread_pool
-
-    def _unmarshaled_dispatch(self, request, dispatch_method=None):
-        """
-        Loads the request dictionary (unmarshaled), calls the method(s)
-        accordingly and returns a JSON-RPC dictionary (not marshaled)
-
-        :param request: JSON-RPC request dictionary (or list of)
-        :param dispatch_method: Custom dispatch method (for method resolution)
-        :return: A JSON-RPC dictionary (or an array of) or None if the request
-                 was a notification
-        :raise NoMulticallResult: No result in batch
-        """
-        if not request:
-            # Invalid request dictionary
-            fault = Fault(-32600, 'Request invalid -- no request data.',
-                          config=self.json_config)
-            _logger.warning("Invalid request: %s", fault)
-            return fault.dump()
-
-        if isinstance(request, utils.ListType):
-            # This SHOULD be a batch, by spec
-            responses = []
-            for req_entry in request:
-                # Validate the request
-                result = validate_request(req_entry, self.json_config)
-                if isinstance(result, Fault):
-                    responses.append(result.dump())
-                    continue
-
-                # Call the method
-                resp_entry = self._marshaled_single_dispatch(
-                    req_entry, dispatch_method)
-
-                # Store its result
-                if isinstance(resp_entry, Fault):
-                    # pylint: disable=E1103
-                    responses.append(resp_entry.dump())
-                elif resp_entry is not None:
-                    responses.append(resp_entry)
-
-            if not responses:
-                # No non-None result
-                _logger.error("No result in Multicall")
-                raise NoMulticallResult("No result")
-
-            return responses
-
-        else:
-            # Single call
-            result = validate_request(request, self.json_config)
-            if isinstance(result, Fault):
-                return result.dump()
-
-            # Call the method
-            response = self._marshaled_single_dispatch(
-                request, dispatch_method)
-            if isinstance(response, Fault):
-                # pylint: disable=E1103
-                return response.dump()
-
-            return response
-
-    def _marshaled_dispatch(self, data, dispatch_method=None, path=None):
-        """
-        Parses the request data (marshaled), calls method(s) and returns a
-        JSON string (marshaled)
-
-        :param data: A JSON request string
-        :param dispatch_method: Custom dispatch method (for method resolution)
-        :param path: Unused parameter, to keep compatibility with xmlrpclib
-        :return: A JSON-RPC response string (marshaled)
-        """
-        # Parse the request
-        try:
-            request = jsonrpclib.loads(data, self.json_config)
-        except Exception as ex:
-            # Parsing/loading error
-            fault = Fault(-32700, 'Request {0} invalid. ({1}:{2})'
-                          .format(data, type(ex).__name__, ex),
-                          config=self.json_config)
-            _logger.warning("Error parsing request: %s", fault)
-            return fault.response()
-
-        # Get the response dictionary
-        try:
-            response = self._unmarshaled_dispatch(request, dispatch_method)
-            if response is not None:
-                # Compute the string representation of the dictionary/list
-                return jsonrpclib.jdumps(response, self.encoding)
-            else:
-                # No result (notification)
-                return ''
-        except NoMulticallResult:
-            # Return an empty string (jsonrpclib internal behaviour)
-            return ''
-
-    def _marshaled_single_dispatch(self, request, dispatch_method=None):
-        """
-        Dispatches a single method call
-
-        :param request: A validated request dictionary
-        :param dispatch_method: Custom dispatch method (for method resolution)
-        :return: A JSON-RPC response dictionary, or None if it was a
-                 notification request
-        """
-        method = request.get('method')
-        params = request.get('params')
-
-        # Prepare a request-specific configuration
-        if 'jsonrpc' not in request and self.json_config.version >= 2:
-            # JSON-RPC 1.0 request on a JSON-RPC 2.0
-            # => compatibility needed
-            config = self.json_config.copy()
-            config.version = 1.0
-        else:
-            # Keep server configuration as is
-            config = self.json_config
-
-        # Test if this is a notification request
-        is_notification = 'id' not in request or request['id'] in (None, '')
-        if is_notification and self.__notification_pool is not None:
-            # Use the thread pool for notifications
-            if dispatch_method is not None:
-                self.__notification_pool.enqueue(
-                    dispatch_method, method, params)
-            else:
-                self.__notification_pool.enqueue(
-                    self._dispatch, method, params, config)
-
-            # Return immediately
-            return None
-        else:
-            # Synchronous call
-            try:
-                # Call the method
-                if dispatch_method is not None:
-                    response = dispatch_method(method, params)
-                else:
-                    response = self._dispatch(method, params, config)
-            except Exception as ex:
-                # Return a fault
-                fault = Fault(-32603, '{0}:{1}'.format(type(ex).__name__, ex),
-                              config=config)
-                _logger.error("Error calling method %s: %s", method, fault)
-                return fault.dump()
-
-            if is_notification:
-                # It's a notification, no result needed
-                # Do not use 'not id' as it might be the integer 0
-                return None
-
-        # Prepare a JSON-RPC dictionary
-        try:
-            return jsonrpclib.dump(response, rpcid=request['id'],
-                                   is_response=True, config=config)
-        except Exception as ex:
-            # JSON conversion exception
-            fault = Fault(-32603, '{0}:{1}'.format(type(ex).__name__, ex),
-                          config=config)
-            _logger.error("Error preparing JSON-RPC result: %s", fault)
-            return fault.dump()
-
-    def _dispatch(self, method, params, config=None):
-        """
-        Default method resolver and caller
-
-        :param method: Name of the method to call
-        :param params: List of arguments to give to the method
-        :param config: Request-specific configuration
-        :return: The result of the method
-        """
-        config = config or self.json_config
-
-        func = None
-        try:
-            # Look into registered methods
-            func = self.funcs[method]
-        except KeyError:
-            if self.instance is not None:
-                # Try with the registered instance
-                try:
-                    # Instance has a custom dispatcher
-                    return getattr(self.instance, '_dispatch')(method, params)
-                except AttributeError:
-                    # Resolve the method name in the instance
-                    try:
-                        func = resolve_dotted_attribute(
-                            self.instance, method, True)
-                    except AttributeError:
-                        # Unknown method
-                        pass
-
-        if func is not None:
-            try:
-                # Call the method
-                if isinstance(params, utils.ListType):
-                    return func(*params)
-                else:
-                    return func(**params)
-            except TypeError as ex:
-                # Maybe the parameters are wrong
-                fault = Fault(-32602, 'Invalid parameters: {0}'.format(ex),
-                              config=config)
-                _logger.warning("Invalid call parameters: %s", fault)
-                return fault
-            except:
-                # Method exception
-                err_lines = traceback.format_exception(*sys.exc_info())
-                trace_string = "{0} | {1}".format(
-                    err_lines[-2].splitlines()[0].strip(), err_lines[-1])
-                fault = Fault(-32603, "Server error: {0}".format(trace_string),
-                              config=config)
-                _logger.exception("Server-side exception: %s", fault)
-                return fault
-        else:
-            # Unknown method
-            fault = Fault(-32601, 'Method {0} not supported.'.format(method),
-                          config=config)
-            _logger.warning("Unknown method: %s", fault)
-            return fault
 
 # ------------------------------------------------------------------------------
 
@@ -456,8 +129,9 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
                 pass
 
             # Execute the method
-            response = self.server._marshaled_dispatch(
-                data, getattr(self, '_dispatch', None), self.path)
+            response = self.server.marshaled_dispatch(
+                data, getattr(self, '_dispatch', None)
+            )
 
             # No exception: send a 200 OK
             self.send_response(200)
@@ -489,7 +163,7 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
 # ------------------------------------------------------------------------------
 
 
-class SimpleJSONRPCServer(socketserver.TCPServer, SimpleJSONRPCDispatcher):
+class SimpleJSONRPCServer(socketserver.TCPServer, JsonRpcProtocolHandler):
     """
     JSON-RPC server (and dispatcher)
     """
@@ -512,8 +186,8 @@ class SimpleJSONRPCServer(socketserver.TCPServer, SimpleJSONRPCDispatcher):
         :param address_family: The server listening address family
         :param config: A JSONRPClib Config instance
         """
-        # Set up the dispatcher fields
-        SimpleJSONRPCDispatcher.__init__(self, encoding, config)
+        # Set up the dispatcher
+        JsonRpcProtocolHandler.__init__(self, config)
 
         # Flag to ease handling of Unix socket mode
         unix_socket = address_family == _AF_UNIX
@@ -615,7 +289,7 @@ class PooledJSONRPCServer(SimpleJSONRPCServer, socketserver.ThreadingMixIn):
 # ------------------------------------------------------------------------------
 
 
-class CGIJSONRPCRequestHandler(SimpleJSONRPCDispatcher, CGIXMLRPCRequestHandler):
+class CGIJSONRPCRequestHandler(JsonRpcProtocolHandler, CGIXMLRPCRequestHandler):
     """
     JSON-RPC CGI handler (and dispatcher)
     """
@@ -626,7 +300,7 @@ class CGIJSONRPCRequestHandler(SimpleJSONRPCDispatcher, CGIXMLRPCRequestHandler)
         :param encoding: Dispatcher encoding
         :param config: A JSONRPClib Config instance
         """
-        SimpleJSONRPCDispatcher.__init__(self, encoding, config)
+        JsonRpcProtocolHandler.__init__(self, config)
         CGIXMLRPCRequestHandler.__init__(self, encoding=encoding)
 
     def handle_jsonrpc(self, request_text):
@@ -638,7 +312,7 @@ class CGIJSONRPCRequestHandler(SimpleJSONRPCDispatcher, CGIXMLRPCRequestHandler)
         except AttributeError:
             writer = sys.stdout
 
-        response = self._marshaled_dispatch(request_text)
+        response = self.marshaled_dispatch(request_text)
         response = response.encode(self.encoding)
         print("Content-Type:", self.json_config.content_type)
         print("Content-Length:", len(response))
