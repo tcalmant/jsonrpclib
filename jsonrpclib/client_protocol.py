@@ -423,7 +423,7 @@ class Payload(object):
 
 
 def check_for_errors(result):
-    # type: (Dict[str, Any]) -> Dict[str, Any]
+    # type: (Optional[Dict[str, Any]]) -> Dict[str, Any]
     """
     Checks if a result dictionary signals an error
 
