@@ -1,12 +1,12 @@
 #!/usr/bin/python
 # -- Content-Encoding: UTF-8 --
 """
-Aliases to ease access to jsonrpclib classes
+Definition of the types of exceptions
 
 :authors: Josh Marshall, Thomas Calmant
 :copyright: Copyright 2019, Thomas Calmant
 :license: Apache License 2.0
-:version: 0.4.0
+:version: 0.5.0
 
 ..
 
@@ -25,21 +25,39 @@ Aliases to ease access to jsonrpclib classes
     limitations under the License.
 """
 
-# Easy access to utility methods and classes
-from jsonrpclib.jsonrpc import Server, ServerProxy
-from jsonrpclib.jsonrpc import MultiCall
-from jsonrpclib.client_protocol import Fault, loads, load, dumps, dump
-from jsonrpclib.exceptions import ProtocolError, AppError
-from jsonrpclib.parser import jloads, jdumps
-import jsonrpclib.history as history
-import jsonrpclib.utils as utils
-
-# ------------------------------------------------------------------------------
-
-
 # Module version
 __version_info__ = (0, 5, 0)
 __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
 __docformat__ = "restructuredtext en"
+
+# ------------------------------------------------------------------------------
+
+
+class ProtocolError(Exception):
+    """
+    JSON-RPC error
+
+    ProtocolError.args[0] can be:
+    * an error message (string)
+    * a (code, message) tuple
+    """
+
+
+class AppError(ProtocolError):
+    """
+    Application error: the error code is not in the pre-defined ones
+
+    AppError.args[0][0]: Error code
+    AppError.args[0][1]: Error message or trace
+    AppError.args[0][2]: Associated data
+    """
+
+    def data(self):
+        """
+        Retrieves the value found in the 'data' entry of the error, or None
+
+        :return: The data associated to the error, or None
+        """
+        return self.args[0][2]
