@@ -68,6 +68,7 @@ except AttributeError:
 from jsonrpclib import Fault
 from jsonrpclib.server_protocol import JsonRpcProtocolHandler, NoMulticallResult
 import jsonrpclib.config
+import jsonrpclib.ipv6utils as ipv6utils
 import jsonrpclib.utils as utils
 import jsonrpclib.threadpool
 
@@ -174,7 +175,8 @@ class SimpleJSONRPCServer(socketserver.TCPServer, JsonRpcProtocolHandler):
     def __init__(self, addr, requestHandler=SimpleJSONRPCRequestHandler,
                  logRequests=True, encoding=None, bind_and_activate=True,
                  address_family=socket.AF_INET,
-                 config=jsonrpclib.config.DEFAULT):
+                 config=jsonrpclib.config.DEFAULT,
+                 use_double_stack=False):
         """
         Sets up the server and the dispatcher
 
@@ -185,6 +187,8 @@ class SimpleJSONRPCServer(socketserver.TCPServer, JsonRpcProtocolHandler):
         :param bind_and_activate: If True, starts the server immediately
         :param address_family: The server listening address family
         :param config: A JSONRPClib Config instance
+        :param use_double_stack: If True and in IPv6 mode, accept both IPv4
+                                 and IPv6 clients
         """
         # Set up the dispatcher
         JsonRpcProtocolHandler.__init__(self, config)
@@ -223,9 +227,24 @@ class SimpleJSONRPCServer(socketserver.TCPServer, JsonRpcProtocolHandler):
 
                 super(RequestHandlerWrapper, self).__init__(*args, **kwargs)
 
-        # Set up the server
-        socketserver.TCPServer.__init__(self, addr, RequestHandlerWrapper,
-                                        bind_and_activate)
+        # Set up the server. Don't bind it yet if using double stack
+        socketserver.TCPServer.__init__(
+            self, addr, RequestHandlerWrapper,
+            bind_and_activate and not use_double_stack
+        )
+
+        # Activate double stack
+        if use_double_stack and address_family == socket.AF_INET6:
+            ipv6utils.set_double_stack(self.socket, True)
+
+            # Now we can activate the server
+            if bind_and_activate:
+                try:
+                    self.server_bind()
+                    self.server_activate()
+                except:
+                    self.server_close()
+                    raise
 
         # Windows-specific
         if fcntl is not None and hasattr(fcntl, 'FD_CLOEXEC'):

@@ -39,6 +39,35 @@ To start protect the server with SSL, use the following snippet:
    server.serve_forever()
 
 
+Note on performances
+====================
+
+Sometimes, it might seen that a client is really slow connecting the server.
+Chances are this is due to the fact that your server is listening to IPv4
+packets only, whereas clients know both your IPv6 and IPv4 addresses.
+In this situation, clients wait a timeout of around 1 second for the IPv6
+address to response before trying the IPv4 one.
+
+To avoid this problem, you will have to start the server in IPv6 mode and to
+activate the double stack mode. That way, the server will be accessible with
+both IPv4 and IPv6 addresses.
+Note that to be sure this works, it is recommended that the server binds all
+IPv6 interfaces (``::``).
+
+This can be done using the following arguments when creating the server:
+
+.. code-block:: python
+
+   import socket
+   from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
+
+   server = SimpleJSONRPCServer(
+      ("::", 8080),
+      address_family=socket.AF_INET6,
+      use_double_stack=True
+   )
+
+
 Notification Thread Pool
 ========================
 
