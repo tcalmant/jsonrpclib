@@ -6,15 +6,17 @@ Tests JSON-RPC compatibility
 :license: Apache License 2.0
 """
 
+# Standard library
+import json
+import unittest
+
 # Tests utilities
 from tests.utilities import UtilityServer
 
 # JSON-RPC library
 import jsonrpclib
-
-# Standard library
-import json
-import unittest
+import jsonrpclib.config
+from jsonrpclib.client_protocol import isbatch, isnotification
 
 # ------------------------------------------------------------------------------
 
@@ -48,7 +50,9 @@ class TestCompatibility(unittest.TestCase):
 
     # Version 2.0 Tests
     def test_positional(self):
-        """ Positional arguments in a single call """
+        """
+        Positional arguments in a single call
+        """
         result = self.client.subtract(23, 42)
         self.assertTrue(result == -19)
         result = self.client.subtract(42, 23)
@@ -66,7 +70,9 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_named(self):
-        """ Named arguments in a single call """
+        """
+        Named arguments in a single call
+        """
         result = self.client.subtract(subtrahend=23, minuend=42)
         self.assertTrue(result == 19)
         result = self.client.subtract(minuend=42, subtrahend=23)
@@ -98,6 +104,9 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_non_existent_method(self):
+        """
+        Tests error response for non-existent response
+        """
         self.assertRaises(jsonrpclib.ProtocolError, self.client.foobar)
         request = json.loads(self.history.request)
         response = json.loads(self.history.response)
@@ -114,10 +123,16 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_special_method(self):
-        self.assertRaises(AttributeError, getattr, self.client, '__special_method__')
+        """
+        Tests the access to a special method
+        """
+        self.assertRaises(AttributeError, getattr, self.client, "__special_method__")
         self.assertIsNone(self.history.request)
 
     def test_invalid_json(self):
+        """
+        Tests an invalid JSON request
+        """
         invalid_json = '{"jsonrpc": "2.0", "method": "foobar, ' + \
             '"params": "bar", "baz]'
         self.client._run_request(invalid_json)
@@ -130,6 +145,9 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_invalid_request(self):
+        """
+        Tests an invalid "params" entry
+        """
         invalid_request = '{"jsonrpc": "2.0", "method": 1, "params": "bar"}'
         self.client._run_request(invalid_request)
         response = json.loads(self.history.response)
@@ -141,6 +159,9 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_batch_invalid_json(self):
+        """
+        Tests an invalid JSON batch request
+        """
         invalid_request = '[ {"jsonrpc": "2.0", "method": "sum", ' + \
             '"params": [1,2,4], "id": "1"},{"jsonrpc": "2.0", "method" ]'
         self.client._run_request(invalid_request)
@@ -153,6 +174,9 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_empty_array(self):
+        """
+        Tests an empty JSON array request
+        """
         invalid_request = '[]'
         self.client._run_request(invalid_request)
         response = json.loads(self.history.response)
@@ -164,6 +188,9 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_nonempty_array(self):
+        """
+        Tests an invalid JSON array request
+        """
         invalid_request = '[1,2]'
         request_obj = json.loads(invalid_request)
         self.client._run_request(invalid_request)
@@ -178,6 +205,9 @@ class TestCompatibility(unittest.TestCase):
             self.assertTrue(resp == verify_resp)
 
     def test_batch(self):
+        """
+        Tests a mixed batch call
+        """
         multicall = jsonrpclib.MultiCall(self.client)
         multicall.sum(1, 2, 4)
         multicall._notify.notify_hello(7)
@@ -223,7 +253,6 @@ class TestCompatibility(unittest.TestCase):
         for i in range(len(requests)):
             verify_request = verify_requests[i]
             request = requests[i]
-            response = None
             if request.get('method') != 'notify_hello':
                 req_id = request.get('id')
                 if 'id' in verify_request:
@@ -232,7 +261,6 @@ class TestCompatibility(unittest.TestCase):
                 verify_response['id'] = req_id
                 responses_by_id[req_id] = verify_response
                 response_i += 1
-                response = verify_response
             self.assertTrue(request == verify_request)
 
         for response in responses:
@@ -243,6 +271,9 @@ class TestCompatibility(unittest.TestCase):
             self.assertTrue(response == verify_response)
 
     def test_batch_notifications(self):
+        """
+        Tests a batch call of notifications
+        """
         multicall = jsonrpclib.MultiCall(self.client)
         multicall._notify.notify_sum(1, 2, 4)
         multicall._notify.notify_hello(7)
@@ -260,3 +291,81 @@ class TestCompatibility(unittest.TestCase):
             valid_req = valid_request[i]
             self.assertTrue(req == valid_req)
         self.assertTrue(self.history.response == '')
+
+    def test_empty_batch(self):
+        """
+        Tests the empty batch call
+        """
+        multicall = jsonrpclib.MultiCall(self.client)
+        multicall()
+
+        # No call must have been made
+        self.assertIsNone(self.history.request)
+
+    def test_isbatch(self):
+        """
+        Tests the batch detection method
+        """
+        # Normal batch
+        multicall = jsonrpclib.MultiCall(self.client)
+        multicall.sum(1, 2, 4)
+        multicall._notify.notify_hello(7)
+        multicall.subtract(42, 23)
+        multicall()
+        request = json.loads(self.history.request)
+        self.history.clear()
+        self.assertTrue(isbatch(request), "Batch not recognized")
+
+        # Single-call batch
+        multicall = jsonrpclib.MultiCall(self.client)
+        multicall.sum(1, 2, 4)
+        multicall()
+        request = json.loads(self.history.request)
+        self.history.clear()
+        self.assertTrue(isbatch(request), "Batch not recognized")
+
+        # Normal request
+        self.client.sum(1, 2, 3)
+        request = json.loads(self.history.request)
+        self.history.clear()
+        self.assertFalse(isbatch(request), "Normal call recognized as batch")
+
+        # JSON-RPC 1.0
+        self.assertFalse(isbatch(
+            [{"jsonrpc": 1.0, "id": 1,
+              "method": "sum", "params": [1, 2]
+              }]), "Batch recognized in JSON RPC 1.0")
+
+        # Bad version
+        for value in ("", None, "2.0.1", 2j, [2.0]):
+            request = [{"jsonrpc": value, "id": 1,
+                        "method": "sum", "params": [1, 2]
+                        }]
+            self.assertRaises(jsonrpclib.ProtocolError, isbatch, request)
+
+        # Bad content
+        self.history.clear()
+        for request in (
+            [], {}, [None], [1, 2], [{1: 2}],
+            [{"id": 1, "method": "sum", "params": [1, 2]}],
+        ):
+            self.assertFalse(
+                isbatch(request),
+                "Bad query recognized as batch: {}".format(request)
+            )
+
+    def test_isnotification(self):
+        """
+        Tests the notification detection method
+        """
+        for version in (2, 1):
+            config = jsonrpclib.config.DEFAULT.copy()
+            config.version = version
+
+            self.client.ping()
+            request = json.loads(self.history.request)
+            self.assertFalse(isnotification(request))
+
+            self.client._notify.ping()
+            request = json.loads(self.history.request)
+            self.assertTrue(isnotification(request))

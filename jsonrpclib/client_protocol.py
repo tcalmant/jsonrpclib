@@ -98,8 +98,7 @@ def dump(
         params, tuple(valid_params)
     ):
         """
-        If a method, and params are not in a list-ish or a Fault,
-        error out.
+        If a method, and params are not in a list-ish or a Fault, error out.
         """
         raise TypeError("Params must be a dict, list, tuple or Fault instance.")
 
@@ -114,8 +113,7 @@ def dump(
     if not isinstance(methodname, utils.STRING_TYPES) and not is_response:
         # Neither a request nor a response
         raise ValueError(
-            "Method name must be a string, or is_response "
-            "must be set to True."
+            "Method name must be a string, or is_response must be set to True."
         )
 
     if config.use_jsonclass:
@@ -482,7 +480,7 @@ def check_for_errors(result):
 
 
 def isbatch(request):
-    # type: (Dict[str, Any]) -> bool
+    # type: (Union[List[Dict[str, Any]], Dict[str, Any]]) -> bool
     """
     Tests if the given request is a batch call, i.e. a list of multiple calls
 
@@ -492,8 +490,8 @@ def isbatch(request):
     if not isinstance(request, (utils.ListType, utils.TupleType)):
         # Not a list: not a batch call
         return False
-    elif len(request) < 1:
-        # Only one request: not a batch call
+    elif not request:
+        # No request: not a batch call
         return False
     elif not isinstance(request[0], utils.DictType):
         # One of the requests is not a dictionary, i.e. a JSON Object
@@ -505,7 +503,7 @@ def isbatch(request):
 
     try:
         version = float(request[0]["jsonrpc"])
-    except ValueError:
+    except (ValueError, TypeError):
         # Bad version of JSON-RPC
         raise ProtocolError('"jsonrpc" key must be a float(able) value.')
 
@@ -530,5 +528,3 @@ def isnotification(request):
     except KeyError:
         # No "id" key in the request: 2.0 notification
         return True
-
-    return False
