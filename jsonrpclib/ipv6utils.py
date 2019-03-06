@@ -43,6 +43,7 @@ __docformat__ = "restructuredtext en"
 
 
 def ipproto_ipv6():
+    # type: () -> int
     """
     Returns the value of socket.IPPROTO_IPV6
 
