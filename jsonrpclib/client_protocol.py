@@ -266,19 +266,7 @@ class Fault(object):
         :param version: JSON-RPC version
         :return: A JSON-RPC response string
         """
-        if not version:
-            version = self.config.version
-
-        if rpcid:
-            self.rpcid = rpcid
-
-        return dumps(
-            self,
-            methodresponse=True,
-            rpcid=self.rpcid,
-            version=version,
-            config=self.config,
-        )
+        return jdumps(self.dump(rpcid, version))
 
     def dump(self, rpcid=None, version=None):
         # type: (Optional[str], Optional[float]) -> Dict[str, Any]
