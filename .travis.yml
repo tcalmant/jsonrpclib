@@ -4,6 +4,7 @@ python:
   - "3.4"
   - "3.5"
   - "3.6"
+  - "3.7"
 
 sudo: required
 
@@ -20,7 +21,7 @@ env:
 
 before_install:
   - pip install nose coverage coveralls
-  - if [[ $TRAVIS_PYTHON_VERSION == '3.6' ]]; then travis_retry pip install aiohttp; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then travis_retry pip install aiohttp; fi
 
 script:
   - nosetests -v --with-coverage --cover-package=jsonrpclib tests
