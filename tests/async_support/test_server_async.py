@@ -24,6 +24,9 @@ from jsonrpclib import Fault
 from jsonrpclib.server_protocol_async import AsyncJsonRpcProtocolHandler
 import jsonrpclib
 
+# Tests
+from tests.test_compatibility import TestCompatibility
+from tests.utilities import register_test_functions
 
 # ------------------------------------------------------------------------------
 # Handler classes
@@ -97,6 +100,8 @@ class AsyncJsonRpcServer:
         """
         Execution of the server
         """
+        self._stop_event.clear()
+
         server = web.Server(self._handler.request_handler)
         self._runner = web.ServerRunner(server)
         await self._runner.setup()
@@ -112,8 +117,11 @@ class AsyncJsonRpcServer:
         await self._site.stop()
         await self._runner.shutdown()
 
+# ------------------------------------------------------------------------------
+# Test case
 
-class AsyncServerTests(unittest.TestCase):
+
+class AsyncServerTests(TestCompatibility):
     """
     Tests the asynchronous server
     """
@@ -122,15 +130,14 @@ class AsyncServerTests(unittest.TestCase):
         """
         Pre-test set up
         """
-        # Define the test handler
+        # Define an asynchronous pause method
         async def pause():
             await asyncio.sleep(0.5)
             return 42
 
+        # Prepare the handler with common functions, plus the asynchronous one
         handler = AsyncJsonRpcProtocolHandler()
-        handler.register_function(lambda: "Hello", name="hello")
-        handler.register_function(lambda *a: sum(a), name="add")
-        handler.register_function(sum)
+        register_test_functions(handler)
         handler.register_function(pause)
 
         # Associate the handler to the protocol wrapper
@@ -143,11 +150,11 @@ class AsyncServerTests(unittest.TestCase):
 
         # Thread that will run the server
         def server_thread():
+            # Don't do that if you don't know what you are doing
+            # Here, the loop is used in the main thread only with
+            # loop.call_soon_threadsafe()
             asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(self.server.run())
-            finally:
-                loop.close()
+            loop.run_until_complete(self.server.run())
 
         # Start the test in a thread
         self.server_thread = threading.Thread(target=server_thread)
@@ -182,15 +189,8 @@ class AsyncServerTests(unittest.TestCase):
         self.server_thread.join()
         self.server_thread = None
 
-    def test_server(self):
+    def test_async_call(self):
         """
-        Tests the asynchronous server
+        Tests the call to an asynchronous method
         """
-        # Standard call
-        self.assertEqual(self.client.hello(), "Hello")
-        self.assertEqual(self.client.add(1, 2, 3), 6)
-        self.assertEqual(self.client.sum([1, 2, 3]), 6)
         self.assertEqual(self.client.pause(), 42)
-
-        # Notification
-        self.assertIsNone(self.client._notify.hello())

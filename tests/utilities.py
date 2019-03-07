@@ -77,6 +77,24 @@ def fail():
 # Server utility class
 
 
+def register_test_functions(server):
+    """
+    Registers all test functions to the server
+
+    :param server: Server to register functions to
+    """
+    server.register_function(summation, "sum")
+    server.register_function(summation, "notify_sum")
+    server.register_function(notify_hello)
+    server.register_function(subtract)
+    server.register_function(update)
+    server.register_function(get_data)
+    server.register_function(add)
+    server.register_function(ping)
+    server.register_function(summation, "namespace.sum")
+    server.register_function(fail)
+
+
 class UtilityServer(object):
     """
     Utility start/stop server
@@ -98,24 +116,13 @@ class UtilityServer(object):
         :return: This object (for in-line calls)
         """
         # Create the server
-        self._server = server = SimpleJSONRPCServer(
-            (addr, port), logRequests=False
-        )
+        self._server = SimpleJSONRPCServer((addr, port), logRequests=False)
 
         # Register test methods
-        server.register_function(summation, "sum")
-        server.register_function(summation, "notify_sum")
-        server.register_function(notify_hello)
-        server.register_function(subtract)
-        server.register_function(update)
-        server.register_function(get_data)
-        server.register_function(add)
-        server.register_function(ping)
-        server.register_function(summation, "namespace.sum")
-        server.register_function(fail)
+        register_test_functions(self._server)
 
         # Serve in a thread
-        self._thread = threading.Thread(target=server.serve_forever)
+        self._thread = threading.Thread(target=self._server.serve_forever)
         self._thread.daemon = True
         self._thread.start()
 
