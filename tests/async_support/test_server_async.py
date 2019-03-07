@@ -26,7 +26,7 @@ import jsonrpclib
 
 # Tests
 from tests.test_compatibility import TestCompatibility
-from tests.utilities import register_test_functions
+from tests.utilities import register_server_functions
 
 # ------------------------------------------------------------------------------
 # Handler classes
@@ -137,7 +137,7 @@ class AsyncServerTests(TestCompatibility):
 
         # Prepare the handler with common functions, plus the asynchronous one
         handler = AsyncJsonRpcProtocolHandler()
-        register_test_functions(handler)
+        register_server_functions(handler)
         handler.register_function(pause)
 
         # Associate the handler to the protocol wrapper

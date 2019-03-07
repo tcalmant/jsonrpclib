@@ -77,7 +77,7 @@ def fail():
 # Server utility class
 
 
-def register_test_functions(server):
+def register_server_functions(server):
     """
     Registers all test functions to the server
 
@@ -119,7 +119,7 @@ class UtilityServer(object):
         self._server = SimpleJSONRPCServer((addr, port), logRequests=False)
 
         # Register test methods
-        register_test_functions(self._server)
+        register_server_functions(self._server)
 
         # Serve in a thread
         self._thread = threading.Thread(target=self._server.serve_forever)
