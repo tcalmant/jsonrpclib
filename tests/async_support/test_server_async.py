@@ -20,8 +20,10 @@ except ImportError:
     raise unittest.SkipTest("async tests require aiohttp")
 
 # JSON-RPC library
-from jsonrpclib import Fault, ServerProxy
+from jsonrpclib import Fault
 from jsonrpclib.server_protocol_async import AsyncJsonRpcProtocolHandler
+import jsonrpclib
+
 
 # ------------------------------------------------------------------------------
 # Handler classes
@@ -31,6 +33,7 @@ class AsyncRpcRequestHandler:
     """
     Basic aiohttp request handler
     """
+
     def __init__(self, protocol_handler, path):
         self._protocol_handler = protocol_handler
         self._path = path
@@ -69,6 +72,7 @@ class AsyncJsonRpcServer:
     """
     Implementation of the asynchronous JSON-RPC server based on aiohttp
     """
+
     def __init__(self, handler: AsyncRpcRequestHandler):
         self._stop_event = asyncio.Event()
         self._handler = handler
@@ -113,13 +117,14 @@ class AsyncServerTests(unittest.TestCase):
     """
     Tests the asynchronous server
     """
-    def test_server(self):
+
+    def setUp(self):
         """
-        Tests the asynchronous server
+        Pre-test set up
         """
         # Define the test handler
         async def pause():
-            await asyncio.sleep(.5)
+            await asyncio.sleep(0.5)
             return 42
 
         handler = AsyncJsonRpcProtocolHandler()
@@ -129,54 +134,63 @@ class AsyncServerTests(unittest.TestCase):
         handler.register_function(pause)
 
         # Associate the handler to the protocol wrapper
-        srv = AsyncJsonRpcServer(AsyncRpcRequestHandler(handler, "/json-rpc"))
+        self.server = AsyncJsonRpcServer(
+            AsyncRpcRequestHandler(handler, "/json-rpc")
+        )
 
-        # Keeps track of the unit test exception (if any)
-        keeper = []
+        # Loop shared with the server thread
+        loop = asyncio.get_event_loop()
 
-        def run_queries():
-            # Wait for the server to come up
-            while srv.port == -1:
-                time.sleep(.1)
-
+        # Thread that will run the server
+        def server_thread():
+            asyncio.set_event_loop(loop)
             try:
-                # Run some queries
-                client = ServerProxy(
-                    "http://127.0.0.1:{}/json-rpc".format(srv.port)
-                )
-                try:
-                    # Standard call
-                    self.assertEqual(client.hello(), "Hello")
-                    self.assertEqual(client.add(1, 2, 3), 6)
-                    self.assertEqual(client.sum([1, 2, 3]), 6)
-                    self.assertEqual(client.pause(), 42)
-
-                    # Notification
-                    self.assertIsNone(client._notify.hello())
-                finally:
-                    # Close the client
-                    client("close")()
-            except BaseException as ex:
-                # Keep track of the exception
-                keeper.append(ex)
+                loop.run_until_complete(self.server.run())
             finally:
-                # Stop the server in the main thread
-                srv.shutdown()
+                loop.close()
 
         # Start the test in a thread
-        thread = threading.Thread(target=run_queries)
-        thread.start()
+        self.server_thread = threading.Thread(target=server_thread)
+        self.server_thread.start()
 
-        # Run the server
+        # Wait for the server to come up
+        while self.server.port == -1:
+            time.sleep(0.1)
+
+        # Store the server port
+        self.port = self.server.port
+
+        # Set up the client
+        self.history = jsonrpclib.history.History()
+        self.client = jsonrpclib.ServerProxy(
+            "http://localhost:{0}/json-rpc".format(self.port),
+            history=self.history,
+        )
+
+    def tearDown(self):
+        """
+        Post-test clean up
+        """
+        # Close the client
+        self.client("close")()
+
+        # Stop the server
         loop = asyncio.get_event_loop()
-        try:
-            loop.run_until_complete(srv.run())
-        finally:
-            loop.close()
+        loop.call_soon_threadsafe(self.server.shutdown)
 
-        # Wait for the query thread to stop
-        thread.join()
+        # Wait for the server to stop
+        self.server_thread.join()
+        self.server_thread = None
 
-        # Raise the exception, if any
-        if keeper:
-            raise keeper[0]
+    def test_server(self):
+        """
+        Tests the asynchronous server
+        """
+        # Standard call
+        self.assertEqual(self.client.hello(), "Hello")
+        self.assertEqual(self.client.add(1, 2, 3), 6)
+        self.assertEqual(self.client.sum([1, 2, 3]), 6)
+        self.assertEqual(self.client.pause(), 42)
+
+        # Notification
+        self.assertIsNone(self.client._notify.hello())
