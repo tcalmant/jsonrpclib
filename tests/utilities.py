@@ -56,7 +56,7 @@ def get_data():
     """
     Returns a list with a string and an integer
     """
-    return ['hello', 5]
+    return ["hello", 5]
 
 
 def ping():
@@ -65,11 +65,13 @@ def ping():
     """
     return True
 
+
 def fail():
     """
     No argument, raises an exception
     """
     raise ValueError("Everything I do fails")
+
 
 # ------------------------------------------------------------------------------
 # Server utility class
@@ -79,6 +81,7 @@ class UtilityServer(object):
     """
     Utility start/stop server
     """
+
     def __init__(self):
         """
         Sets up members
@@ -95,19 +98,20 @@ class UtilityServer(object):
         :return: This object (for in-line calls)
         """
         # Create the server
-        self._server = server = SimpleJSONRPCServer((addr, port),
-                                                    logRequests=False)
+        self._server = server = SimpleJSONRPCServer(
+            (addr, port), logRequests=False
+        )
 
         # Register test methods
-        server.register_function(summation, 'sum')
-        server.register_function(summation, 'notify_sum')
+        server.register_function(summation, "sum")
+        server.register_function(summation, "notify_sum")
         server.register_function(notify_hello)
         server.register_function(subtract)
         server.register_function(update)
         server.register_function(get_data)
         server.register_function(add)
         server.register_function(ping)
-        server.register_function(summation, 'namespace.sum')
+        server.register_function(summation, "namespace.sum")
         server.register_function(fail)
 
         # Serve in a thread
