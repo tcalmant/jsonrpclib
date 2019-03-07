@@ -91,8 +91,8 @@ class AsyncJsonRpcProtocolHandler(JsonRpcProtocolHandler):
         JsonRpcProtocolHandler.__init__(self, config)
 
         # Disable incompatible methods
-        del self.set_notification_pool
-        del self._marshaled_dispatch
+        self.set_notification_pool = None
+        self._marshaled_dispatch = None
 
     async def marshaled_dispatch(self, data, dispatch_method=None):
         # type: (str, Optional[DispatchMethod]) -> Optional[str]
