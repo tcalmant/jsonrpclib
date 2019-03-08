@@ -20,10 +20,12 @@ except ImportError:
 # JSON-RPC library
 import jsonrpclib
 from jsonrpclib.jsonrpc_async import AsyncServerProxy
+from jsonrpclib.impl.aiohttp_impl import AiohttpTransport
 
 # Tests
 from tests.test_compatibility import TestCompatibility
 from tests.utilities import UtilityServer
+
 
 # ------------------------------------------------------------------------------
 
@@ -103,7 +105,9 @@ class TestAsyncClient(TestCompatibility):
         self.history = jsonrpclib.history.History()
         self.client = AsyncClientWrapper(
             AsyncServerProxy(
-                "http://127.0.0.1:{0}".format(self.port), history=self.history
+                "http://127.0.0.1:{0}".format(self.port),
+                AiohttpTransport,
+                history=self.history,
             )
         )
 

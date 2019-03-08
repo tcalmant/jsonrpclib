@@ -34,8 +34,9 @@ There are still some features to add to match the synchronous version:
 try:
     # Typing with mypy
     # pylint: disable=W0611
-    from typing import Any, Callable, Dict, List, Optional, Union
+    from typing import Any, Callable, Dict, List, Optional, Type
     from ssl import SSLContext
+    from jsonrpclib.impl import AbstractAsyncTransport
     import jsonrpclib.history
 except ImportError:
     pass
@@ -52,10 +53,6 @@ except ImportError:
     # Python 2
     # pylint: disable=F0401,E0611
     from urllib import splittype, splithost
-
-# aiohttp
-import aiohttp
-import yarl
 
 # Library includes
 from jsonrpclib.client_protocol import loads, dumps, check_for_errors
@@ -78,169 +75,6 @@ _logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------
 
 
-class AiohttpTransport:
-    """
-    Asynchronous transport layer based on ``aiohttp``
-    """
-
-    # List of non-overridable headers
-    # Use the configuration to change the content-type
-    readonly_headers = ("content-length", "content-type")
-
-    def __init__(
-        self,
-        scheme="http",
-        unix_path=None,
-        ssl_context=None,
-        config=jsonrpclib.config.DEFAULT,
-    ):
-        # type: (str, Optional[str], Optional[SSLContext], jsonrpclib.config.Config) -> None
-        """
-        :param scheme: Protocol to use (http or https)
-        :param scheme: Protocol schema (http or https)
-        :param unix_path: Path to the Unix socket (optional)
-        :param ssl_context: SSL context to use (optional)
-        :param config: JSONRPCLib configuration
-        """
-        self._config = config
-        self._scheme = scheme or "http"
-        self._unix_path = unix_path
-        self._ssl_context = ssl_context
-
-        # Additional headers: list of dictionaries
-        self.additional_headers = []  # type: List[Dict[str, Any]]
-
-    async def close(self):
-        """
-        Does nothing (API compliance)
-        """
-
-    def push_headers(self, headers):
-        # type: (Dict[str, Any]) -> None
-        """
-        Adds a dictionary of headers to the additional headers list
-
-        :param headers: A dictionary
-        """
-        self.additional_headers.append(headers)
-
-    def pop_headers(self, headers):
-        # type: (Dict[str, Any]) -> None
-        """
-        Removes the given dictionary from the additional headers list.
-        Also validates that given headers are on top of the stack
-
-        :param headers: Headers to remove
-        :raise AssertionError: The given dictionary is not on the latest stored
-                               in the additional headers list
-        """
-        assert self.additional_headers[-1] == headers
-        self.additional_headers.pop()
-
-    def _compute_additional_headers(self):
-        # type: () -> Dict[str, Any]
-        """
-        Computes the headers to add to the request. Filters read only headers
-
-        :return: The dictionary of headers added to the request
-        """
-        additional_headers = {}  # type: Dict[str, Any]
-
-        # Prepare the merged dictionary
-        for headers in self.additional_headers:
-            additional_headers.update(headers)
-
-        # Normalize keys and values
-        additional_headers = {
-            str(key).lower(): str(value)
-            for key, value in additional_headers.items()
-        }
-
-        # Remove forbidden keys
-        for forbidden in self.readonly_headers:
-            additional_headers.pop(forbidden, None)
-
-        return additional_headers
-
-    @staticmethod
-    async def _make_connector(scheme, unix_path, ssl_context):
-        # type: (str, Optional[str], SSLContext) -> aiohttp.BaseConnector
-        """
-        Prepares an ``aiohttp`` connector according to the configuration given
-        to the server proxy
-
-        :param scheme: Protocol schema (http or https)
-        :param unix_path: Path to the Unix socket (optional)
-        :param ssl_context: SSL context to use (optional)
-        :return: An ``aiohttp`` connector
-        """
-        if unix_path:
-            if scheme == "http":
-                # In Unix mode, we use the path part of the URL (handler)
-                # as the path to the socket file
-                return aiohttp.UnixConnector(path=unix_path)
-        elif scheme == "https":
-            return aiohttp.TCPConnector(ssl=ssl_context)
-        else:
-            return aiohttp.TCPConnector()
-
-        raise IOError(
-            "Unhandled combination: UNIX={}, protocol={}".format(
-                bool(unix_path), scheme
-            )
-        )
-
-    def _make_url(self, host, handler):
-        # type: (Optional[str], str) -> yarl.URL
-        """
-        Prepares a URL object according to transport configuration
-
-        :param host: Target host name (unused with Unix socket)
-        :param handler: Query path
-        """
-        if host:
-            # Got an absolute path
-            return yarl.URL.build(scheme=self._scheme, host=host, path=handler)
-
-        # No host: relative path (Unix mode)
-        return yarl.URL.build(path=handler)
-
-    async def request(self, host, handler, request_body, verbose=False):
-        # type: (Optional[str], str, str, bool) -> str
-        """
-        Sends a complete request and parses a response
-
-        :param host: Target host name (unused with Unix socket)
-        :param handler: Query path
-        :param request_body: String content of the request
-        :param verbose: Log verbosity flag
-        """
-        request = request_body.encode("utf-8")
-        url = self._make_url(host, handler)
-
-        # Compute headers
-        headers = {
-            "user-agent": self._config.user_agent,
-            "content-type": self._config.content_type,
-        }
-        headers.update(self._compute_additional_headers())
-
-        # Prepare the connector (it will be closed at the end of the session
-        # life cycle
-        connector = await self._make_connector(
-            self._scheme, self._unix_path, self._ssl_context
-        )
-
-        async with aiohttp.ClientSession(connector=connector) as session:
-            async with session.post(
-                url,
-                data=request,
-                headers=headers,
-                skip_auto_headers=headers.keys(),
-            ) as response:
-                return await response.text()
-
-
 class AsyncServerProxy:
     """
     Asynchronous version of the ServerProxy object
@@ -249,6 +83,7 @@ class AsyncServerProxy:
     def __init__(
         self,
         uri,
+        transport,
         encoding=None,
         verbose=False,
         version=None,
@@ -257,7 +92,7 @@ class AsyncServerProxy:
         config=jsonrpclib.config.DEFAULT,
         context=None,
     ):
-        # type: (str, Optional[str], bool, Any, Optional[Dict[str, Any]], Optional[jsonrpclib.history.History], jsonrpclib.config.Config, Optional[SSLContext]) -> None
+        # type: (str, Type[AbstractAsyncTransport], Optional[str], bool, Any, Optional[Dict[str, Any]], Optional[jsonrpclib.history.History], jsonrpclib.config.Config, Optional[SSLContext]) -> None
         """
         Sets up the server proxy
 
@@ -281,7 +116,7 @@ class AsyncServerProxy:
         schema, uri = splittype(uri)
         use_unix = False
         if schema.startswith("unix+"):
-            schema = schema[len("unix+") :]
+            schema = schema[len("unix+"):]
             use_unix = True
 
         if schema not in ("http", "https"):
@@ -302,7 +137,7 @@ class AsyncServerProxy:
             self.__handler = "/"
 
         # aiohttp connector
-        self.__transport = AiohttpTransport(
+        self.__transport = transport(
             schema, unix_path, context, self._config
         )
 
