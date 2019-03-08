@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tests the asynchronous server implementation with a synchronous client
+Tests the asynchronous client implementation with a synchronous server
 
 Only works with Python 3.5+
 
