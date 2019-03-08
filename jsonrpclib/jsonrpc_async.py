@@ -3,12 +3,6 @@
 """
 Asynchronous version of the jsonrpclib client
 
-**Work in Progress**
-There are still some features to add to match the synchronous version:
-* Support MultiCall
-* Enhance the use of aiohttp (check if we could reuse a session, ...)
-* Add unit tests
-
 :authors: Thomas Calmant
 :copyright: Copyright 2019, Thomas Calmant
 :license: Apache License 2.0
