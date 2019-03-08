@@ -34,18 +34,22 @@ try:
     # pylint: disable=W0611
     from typing import Optional
     from ssl import SSLContext
-    import jsonrpclib.history
+
+    from jsonrpclib.server_protocol_async import AsyncJsonRpcProtocolHandler
 except ImportError:
     pass
 
 # Standard library
+import asyncio
 import logging
 
 # aiohttp
+from aiohttp import web
 import aiohttp
 import yarl
 
 # Library includes
+from .. import Fault
 from .abstract_async import AbstractAsyncTransport
 
 # ------------------------------------------------------------------------------
@@ -151,3 +155,118 @@ class AiohttpTransport(AbstractAsyncTransport):
 
 # ------------------------------------------------------------------------------
 # Server handlers
+
+
+class AiohttpRpcHandler:
+    """
+    Basic aiohttp request handler
+    """
+
+    def __init__(self, protocol_handler, path):
+        # type: (AsyncJsonRpcProtocolHandler, str) -> None
+        """
+        :param protocol_handler:
+        :param path: Path accepted to handle requests
+        """
+        self._protocol_handler = protocol_handler
+        self._path = path
+
+    async def request_handler(self, request):
+        # type: (web.BaseRequest) -> web.Response
+        """
+        Handles an HTTP request
+        """
+        # Sanity check
+        if request.method != "POST":
+            return web.HTTPMethodNotAllowed(request.method, ["POST"])
+
+        request_path = request.url.path
+        if request_path != self._path:
+            return web.HTTPNotFound()
+
+        # Parse the body
+        request_data = await request.text()
+        response = await self._protocol_handler.handle_request_str(request_data)
+
+        if response is not None:
+            result_code = 200
+            if isinstance(response, Fault):
+                result_code = 500
+
+            # Send the response
+            return web.json_response(response, status=result_code)
+        else:
+            # Send an empty response string
+            # This is the expected behaviour for notifications and when
+            # handling NoMulticallResult
+            return web.json_response(body=b"")
+
+
+class AiohttpJsonRpcServer:
+    """
+    Implementation of the asynchronous JSON-RPC server based on aiohttp
+    """
+
+    def __init__(self, handler, address, port=0):
+        # type: (AiohttpRpcHandler, str, int) -> None
+        """
+        :param handler: The JSON-RPC request handler
+        :param address: Binding address of the server
+        :param port: Port to listen to (0 for random port)
+        """
+        self._stop_event = asyncio.Event()
+        self._handler = handler
+        self._address = address
+        self._port = port
+        self._real_port = -1
+        self._site = None
+        self._runner = None
+
+    def get_port(self):
+        # type: () -> int
+        """
+        Returns the port the server is listening to, or -1 if the server is not
+        listening
+
+        :return: The port the server is listening to or -1
+        """
+        return self._real_port
+
+    def shutdown(self):
+        # type: () -> None
+        """
+        Stops the server
+        """
+        self._stop_event.set()
+
+    async def async_check_interrupt(self):
+        # type: () -> None
+        """
+        Forces Python to check if a KeyboardInterrupt exception must be raised
+        """
+        while not self._stop_event.is_set():
+            await asyncio.sleep(0.5)
+
+    async def run(self):
+        # type: () -> None
+        """
+        Execution of the server
+        """
+        self._stop_event.clear()
+
+        server = web.Server(self._handler.request_handler)
+        self._runner = web.ServerRunner(server)
+        await self._runner.setup()
+
+        self._site = web.TCPSite(self._runner, self._address, self._port)
+        await self._site.start()
+        self._real_port = self._site._server.sockets[0].getsockname()[1]
+
+        try:
+            # Wait the server shutdown message
+            await self._stop_event.wait()
+        finally:
+            # Clean up
+            self._real_port = -1
+            await self._site.stop()
+            await self._runner.shutdown()
