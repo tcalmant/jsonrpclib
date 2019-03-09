@@ -200,10 +200,6 @@ class TransportMixIn(AbstractTransport):
     # for Python 2.7 support
     _connection = None  # type: Optional[Tuple[str, HTTPConnection]]
 
-    # List of non-overridable headers
-    # Use the configuration to change the content-type
-    readonly_headers = ('content-length', 'content-type')
-
     def __init__(self, config=jsonrpclib.config.DEFAULT, context=None):
         # type: (jsonrpclib.config.Config, Optional[SSLContext]) -> None
         """
