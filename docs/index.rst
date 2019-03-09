@@ -25,6 +25,7 @@ This library is licensed under the terms of the
 
    installation
    client
+   client_async
    server
    server_async
    class_translation
