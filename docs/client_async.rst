@@ -41,13 +41,15 @@ This sample shows how easy it is to use the new API.
    import asyncio
 
    from jsonrpclib.jsonrpc_async import AsyncServerProxy
+   from jsonrpclib.impl.aiohttp_impl import AiohttpTransport
+
 
    async def main():
        """
        Script entry point
        """
        # As easy as it can be
-       server = AsyncServerProxy("http://localhost:8080")
+       server = AsyncServerProxy("http://localhost:8080", AiohttpTransport)
        print(await server.pow(2, 4096))
 
 

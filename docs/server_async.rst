@@ -25,16 +25,14 @@ The following documentation will use the
 Sample usage with ``aiohttp``
 =============================
 
-.. note:: Use the high-level API of aiohttp
-
 Imports
 -------
 
 .. code-block:: python
 
    import asyncio
-   from aiohttp import web
    from jsonrpclib.server_protocol_async import AsyncJsonRpcProtocolHandler
+   from jsonrpclib.impl.aiohttp_impl import AiohttpRpcHandler, AiohttpJsonRpcServer
 
 
 Prepare the protocol handler
@@ -64,123 +62,49 @@ The first step is the creation of the protocol handler:
    json_handler.register_introspection_functions()
 
 
-Prepare the request handler
----------------------------
+Asynchronous start method
+-------------------------
 
-The second step is to prepare the request handler that will be used by
-``aiohttp``:
-
-.. code-block:: python
-
-   class AsyncRpcRequestHandler:
-      """
-      Request handler for aiohttp
-      """
-      def __init__(self, protocol_handler, path):
-         """
-         :param protocol_handler: The asynchronous JSON-RPC protocol handler
-         :param path: Path we'll answer to
-         """
-         self._protocol_handler = protocol_handler
-         self._path = path
-
-      async def request_handler(self, request):
-         """
-         Handles an HTTP request
-         """
-         # Sanity check
-         if request.method != "POST":
-             return web.HTTPMethodNotAllowed(request.method, ["POST"])
-
-         request_path = request.url.path
-         if request_path != self._path:
-             return web.HTTPNotFound()
-
-         # Parse the body
-         request_data = await request.text()
-         response = await self._protocol_handler.handle_request_str(request_data)
-
-         result_code = 200
-         if isinstance(response, Fault):
-             result_code = 500
-
-         if response is not None:
-             # Send the response
-             return web.json_response(response, status=result_code)
-         else:
-             # Send an empty response string
-             # This is the expected behaviour for notifications and when
-             # handling NoMulticallResult
-             return web.json_response(body=b"", status=result_code)
-
-.. note:: The two handlers we just created in asynchronous mode are equivalent
-   to the HTTP request handler in synchronous mode, as the latter inherits from
-   the synchronous protocol handler
-
-
-Wrapper for the HTTP server
----------------------------
-
-This has been implemented as a workaround for the interruption issue
-(Ctrl+C not handled immediately) when using asyncio.
+We then define a utility method that will start the ``aiohttp`` server in the
+current event loop. It will also start a *checker* which will wake up every
+half second to ensure that Python looks for ``KeyboardInterrupt`` exceptions to
+raise from time to time:
 
 .. code-block:: python
 
-   class AsyncJsonRpcServer:
-    def __init__(self, handler: AsyncRpcRequestHandler):
-        self._stop_event = asyncio.Event()
-        self._handler = handler
+   def start_sync(srv):
+       loop = asyncio.get_event_loop()
+       checker = loop.create_task(srv.async_check_interrupt())
+       try:
+           loop.run_until_complete(srv.run())
+       except KeyboardInterrupt:
+           srv.shutdown()
+       finally:
+           # Wait for the interruption checker
+           loop.run_until_complete(checker)
 
-    def start_sync(self):
-        self._stop_event.clear()
-
-        loop = asyncio.get_event_loop()
-        checker = loop.create_task(self.async_check_interrupt())
-        try:
-            loop.run_until_complete(self.async_server_run())
-        except KeyboardInterrupt:
-            self._stop_event.set()
-        finally:
-            # Wait for the interruption checker
-            loop.run_until_complete(checker)
-            loop.close()
-
-    def shutdown(self):
-        self._stop_event.set()
-
-    async def async_check_interrupt(self):
-        while not self._stop_event.is_set():
-            await asyncio.sleep(0.5)
-
-    async def async_server_run(self):
-        server = web.Server(self._handler.request_handler)
-        runner = web.ServerRunner(server)
-        print("Setting up...")
-        await runner.setup()
-        print("Done setup.")
-
-        site = web.TCPSite(runner, "localhost", 8080)
-        print("Starting...")
-        await site.start()
-        print("Servicing on", site._server.sockets[0].getsockname()[1])
-
-        # Wait the server shutdown message
-        await self._stop_event.wait()
-
-        # Clean up
-        await site.stop()
-        await runner.shutdown()
 
 Execution
 ---------
 
-Finally, we can run the HTTP server.
+.. note:: Maybe offer a higher-level ``aiohttp`` request handler
 
+Here, we can manage the life cycle of the HTTP server.
+
+We first create the HTTP request handler based on ``aiohttp``.
+It is a low-level request handler, which is why it's there that we indicate the
+path used for JSON-RPC queries.
+
+Then, we prepare the ``aiohttp``-based server itself, indicating its request
+handler, binding address and listened port:
 
 .. code-block:: python
 
-   srv = AsyncJsonRpcServer(AsyncRpcRequestHandler(json_handler, "/json-rpc"))
+   http_handler = AiohttpRpcHandler(json_handler, "/json-rpc")
+   srv = AiohttpJsonRpcServer(http_handler, "localhost", 8080)
    try:
-       srv.start_sync()
+       start_sync()
    except KeyboardInterrupt:
        srv.shutdown()
+
+The server is now accessible.
