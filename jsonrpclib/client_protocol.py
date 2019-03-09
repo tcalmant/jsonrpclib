@@ -69,7 +69,7 @@ def dump(
     is_notify=False,
     config=jsonrpclib.config.DEFAULT,
 ):
-    # type: (Optional[Union[Fault, List[Any]]], Optional[str], Optional[str], Union[str, float, None], bool, bool, jsonrpclib.config.Config) -> Dict[str, Any]
+    # type: (Optional[Union[Fault, List[Any], Dict[str, Any]]], Optional[str], Optional[str], Union[str, float, None], bool, bool, jsonrpclib.config.Config) -> Dict[str, Any]
     """
     Prepares a JSON-RPC dictionary (request, notification, response or error)
 
@@ -409,7 +409,7 @@ class Payload(object):
 
 
 def check_for_errors(result):
-    # type: (Optional[Dict[str, Any]]) -> Dict[str, Any]
+    # type: (Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]) -> Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]
     """
     Checks if a result dictionary signals an error
 

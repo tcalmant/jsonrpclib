@@ -27,7 +27,7 @@ Implementations of clients and servers
 try:
     # Typing with mypy
     # pylint: disable=W0611
-    from typing import Any, Callable, Dict, List, Optional, Union
+    from typing import Any, Dict, List, Optional, Tuple
     from ssl import SSLContext
     import jsonrpclib.history
 except ImportError:
@@ -88,14 +88,21 @@ class AbstractTransport:
         assert self.additional_headers[-1] == headers
         self.additional_headers.pop()
 
-    def compute_additional_headers(self):
-        # type: () -> Dict[str, Any]
+    def compute_additional_headers(self, extra_headers=None):
+        # type: (Optional[List[Tuple[str, Any]]]) -> Dict[str, Any]
         """
         Computes the headers to add to the request. Filters read only headers
 
         :return: The dictionary of headers added to the request
         """
         additional_headers = {}  # type: Dict[str, Any]
+
+        # Add extra headers
+        # (list of tuples, inherited from xmlrpclib.client.Transport)
+        # Authentication headers are stored there
+        if extra_headers:
+            for key, value in extra_headers:
+                additional_headers[key] = value
 
         # Prepare the merged dictionary
         for headers in self.additional_headers:

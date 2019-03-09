@@ -57,6 +57,17 @@ See https://github.com/tcalmant/jsonrpclib for more info.
     limitations under the License.
 """
 
+try:
+    # Typing with mypy
+    # pylint: disable=W0611
+    from typing import Any, Callable, Dict, Generator, Iterator, List, Optional, \
+        Tuple, Type, Union
+    from ssl import SSLContext
+    from jsonrpclib.impl import AbstractTransport
+    import jsonrpclib.history
+except ImportError:
+    pass
+
 # Standard library
 import contextlib
 import logging
@@ -93,6 +104,7 @@ except ImportError:
 # Library includes
 from jsonrpclib.client_protocol import check_for_errors, dumps, loads
 from jsonrpclib.exceptions import ProtocolError
+from jsonrpclib.impl import AbstractTransport
 import jsonrpclib.config
 import jsonrpclib.utils as utils
 
@@ -108,47 +120,25 @@ __docformat__ = "restructuredtext en"
 # Create the logger
 _logger = logging.getLogger(__name__)
 
+
 # ------------------------------------------------------------------------------
 # XMLRPClib re-implementations
-
-
-class JSONParser(object):
-    """
-    Default JSON parser
-    """
-    def __init__(self, target):
-        """
-        Associates the target loader to the parser
-
-        :param target: a JSONTarget instance
-        """
-        self.target = target
-
-    def feed(self, data):
-        """
-        Feeds the associated target with the given data
-        """
-        self.target.feed(data)
-
-    @staticmethod
-    def close():
-        """
-        Does nothing
-        """
-        pass
 
 
 class JSONTarget(object):
     """
     Unmarshalls stream data to a string
     """
+
     def __init__(self):
+        # type: () -> None
         """
         Sets up the unmarshaller
         """
-        self.data = []
+        self.data = []  # type: Union[List[bytes], List[str]]
 
     def feed(self, data):
+        # type: (Union[bytes, str]) -> None
         """
         Stores the given raw data into a buffer
         """
@@ -156,6 +146,7 @@ class JSONTarget(object):
         self.data.append(data)
 
     def close(self):
+        # type: () -> str
         """
         Unmarshalls the buffered data
         """
@@ -174,21 +165,54 @@ class JSONTarget(object):
             return data
 
 
-class TransportMixIn(object):
+class JSONParser(object):
+    """
+    Default JSON parser
+    """
+
+    def __init__(self, target):
+        # type: (JSONTarget) -> None
+        """
+        Associates the target loader to the parser
+
+        :param target: a JSONTarget instance
+        """
+        self.target = target
+
+    def feed(self, data):
+        # type: (bytes) -> None
+        """
+        Feeds the associated target with the given data
+        """
+        self.target.feed(data)
+
+    @staticmethod
+    def close():
+        # type: () -> None
+        """
+        Does nothing
+        """
+        pass
+
+
+class TransportMixIn(AbstractTransport):
     """ Just extends the XML-RPC transport where necessary. """
     # for Python 2.7 support
-    _connection = None
+    _connection = None  # type: Optional[Tuple[str, HTTPConnection]]
 
     # List of non-overridable headers
     # Use the configuration to change the content-type
     readonly_headers = ('content-length', 'content-type')
 
     def __init__(self, config=jsonrpclib.config.DEFAULT, context=None):
+        # type: (jsonrpclib.config.Config, Optional[SSLContext]) -> None
         """
         Sets up the transport
 
         :param config: A JSONRPClib Config instance
         """
+        AbstractTransport.__init__(self)
+
         # Store the configuration
         self._config = config
 
@@ -198,75 +222,38 @@ class TransportMixIn(object):
         # Set up the user agent
         self.user_agent = config.user_agent
 
-        # Additional headers: list of dictionaries
-        self.additional_headers = []
-
         # Avoid a pep-8 error
         self.accept_gzip_encoding = True
         self.verbose = False
 
-    def push_headers(self, headers):
-        """
-        Adds a dictionary of headers to the additional headers list
-
-        :param headers: A dictionary
-        """
-        self.additional_headers.append(headers)
-
-    def pop_headers(self, headers):
-        """
-        Removes the given dictionary from the additional headers list.
-        Also validates that given headers are on top of the stack
-
-        :param headers: Headers to remove
-        :raise AssertionError: The given dictionary is not on the latest stored
-                               in the additional headers list
-        """
-        assert self.additional_headers[-1] == headers
-        self.additional_headers.pop()
-
     def emit_additional_headers(self, connection):
+        # type: (Any) -> Dict[str, Any]
         """
         Puts headers as is in the request, filtered read only headers
 
         :param connection: The request connection
         :return: The dictionary of headers added to the connection
         """
-        additional_headers = {}
-
         # Setup extra headers
         # (list of tuples, inherited from xmlrpclib.client.Transport)
         # Authentication headers are stored there
         try:
-            extra_headers = self._extra_headers or []
+            extra_headers = self._extra_headers
         except AttributeError:
             # Not available this version of Python (should not happen)
-            pass
-        else:
-            for (key, value) in extra_headers:
-                additional_headers[key] = value
+            extra_headers = []
 
-        # Prepare the merged dictionary
-        for headers in self.additional_headers:
-            additional_headers.update(headers)
+        # Compute the headers
+        additional_headers = self.compute_additional_headers(extra_headers)
 
-        # Normalize keys and values
-        additional_headers = dict(
-            (str(key).lower(), str(value))
-            for key, value in additional_headers.items())
-
-        # Remove forbidden keys
-        for forbidden in self.readonly_headers:
-            additional_headers.pop(forbidden, None)
-
-        # Reversed order: in the case of multiple headers value definition,
-        # the latest pushed has priority
+        # Send them through the connection
         for key, value in additional_headers.items():
             connection.putheader(key, value)
 
         return additional_headers
 
-    def single_request(self, host, handler, request_body, verbose=0):
+    def single_request(self, host, handler, request_body, verbose=False):
+        # type: (str, str, str, bool) -> Union[Dict[str, Any], List[Dict[str, Any]]]
         """
         Send a complete request, and parse the response.
 
@@ -278,7 +265,7 @@ class TransportMixIn(object):
         :param verbose: Debugging flag.
         :return: Parsed response.
         """
-        connection = self.make_connection(host)
+        connection = self.make_connection(host)  # type: HTTPConnection
         try:
             self.send_request(connection, handler, request_body, verbose)
             self.send_content(connection, request_body)
@@ -300,7 +287,8 @@ class TransportMixIn(object):
                             response.status, response.reason,
                             response.msg)
 
-    def send_request(self, connection, handler, request_body, debug=0):
+    def send_request(self, connection, handler, request_body, debug=False):
+        # type: (Any, str, str, bool) -> HTTPConnection
         """
         Send HTTP request.
 
@@ -323,6 +311,7 @@ class TransportMixIn(object):
         return connection
 
     def send_content(self, connection, request_body):
+        # type: (Any, str) -> None
         """
         Completes the request headers and sends the request body of a JSON-RPC
         request over a HTTPConnection
@@ -350,6 +339,7 @@ class TransportMixIn(object):
 
     @staticmethod
     def getparser():
+        # type: () -> Tuple[JSONParser, JSONTarget]
         """
         Create an instance of the parser, and attach it to an unmarshalling
         object. Return both objects.
@@ -364,7 +354,12 @@ class Transport(TransportMixIn, XMLTransport):
     """
     Mixed-in HTTP transport
     """
+
     def __init__(self, config):
+        # type: (jsonrpclib.config.Config) -> None
+        """
+        :param config: A jsonrpclib configuration
+        """
         TransportMixIn.__init__(self, config)
         XMLTransport.__init__(self)
 
@@ -373,7 +368,13 @@ class SafeTransport(TransportMixIn, XMLSafeTransport):
     """
     Mixed-in HTTPS transport
     """
+
     def __init__(self, config, context):
+        # type: (jsonrpclib.config.Config, Optional[SSLContext]) -> None
+        """
+        :param config: A jsonrpclib configuration
+        :param context: An SSLContext object, if nay
+        """
         TransportMixIn.__init__(self, config, context)
         try:
             # Give the context to XMLSafeTransport, to avoid it setting the
@@ -385,6 +386,7 @@ class SafeTransport(TransportMixIn, XMLSafeTransport):
             # wasn't available
             XMLSafeTransport.__init__(self)
 
+
 # ------------------------------------------------------------------------------
 
 
@@ -392,7 +394,9 @@ class UnixHTTPConnection(HTTPConnection):
     """
     Replaces the connect() method of HTTPConnection to use a Unix socket
     """
+
     def __init__(self, path, *args, **kwargs):
+        # type: (str, Any, Any) -> None
         """
         Constructs the HTTP connection.
 
@@ -405,6 +409,7 @@ class UnixHTTPConnection(HTTPConnection):
         self.path = path
 
     def connect(self):
+        # type: () -> None
         """
         Connects to the described server
         """
@@ -416,7 +421,9 @@ class UnixTransport(TransportMixIn, XMLTransport):
     """
     Mixed-in HTTP transport over a UNIX socket
     """
+
     def __init__(self, config, path=None):
+        # type: (jsonrpclib.config.Config, Optional[str]) -> None
         """
         :param config: The jsonrpclib configuration
         :param path: Path to the Unix socket (overrides the host name later)
@@ -427,6 +434,7 @@ class UnixTransport(TransportMixIn, XMLTransport):
         self.__unix_path = os.path.abspath(path) if path else None
 
     def make_connection(self, host):
+        # type: (str) -> HTTPConnection
         """
         Connect to server.
 
@@ -449,6 +457,7 @@ class UnixTransport(TransportMixIn, XMLTransport):
         self._connection = host, UnixHTTPConnection(path)
         return self._connection[1]
 
+
 # ------------------------------------------------------------------------------
 
 
@@ -457,9 +466,11 @@ class ServerProxy(XMLServerProxy):
     Unfortunately, much more of this class has to be copied since
     so much of it does the serialization.
     """
+
     def __init__(self, uri, transport=None, encoding=None,
                  verbose=0, version=None, headers=None, history=None,
                  config=jsonrpclib.config.DEFAULT, context=None):
+        # type: (str, Optional[TransportMixIn], Optional[str], int, Any, Optional[List[Dict[str, Any]]], Optional[jsonrpclib.history.History], jsonrpclib.config.Config, Optional[SSLContext]) -> None
         """
         Sets up the server proxy
 
@@ -489,6 +500,7 @@ class ServerProxy(XMLServerProxy):
             raise IOError('Unsupported JSON-RPC protocol.')
 
         self.__host, self.__handler = splithost(uri)
+        unix_path = None
         if use_unix:
             unix_path = self.__handler
             self.__handler = '/'
@@ -512,7 +524,7 @@ class ServerProxy(XMLServerProxy):
             if transport is None:
                 raise IOError(
                     "Unhandled combination: UNIX={}, protocol={}"
-                    .format(use_unix, schema)
+                        .format(use_unix, schema)
                 )
 
         self.__transport = transport
@@ -524,7 +536,49 @@ class ServerProxy(XMLServerProxy):
         # Global custom headers are injected into Transport
         self.__transport.push_headers(headers or {})
 
+    def __getattr__(self, name):
+        # type: (str) -> _Method
+        """
+        Returns a callable object to call the remote service
+        """
+        if name.startswith("__") and name.endswith("__"):
+            # Don't proxy special methods.
+            raise AttributeError("ServerProxy has no attribute '%s'" % name)
+        # Same as original, just with new _Method reference
+        return _Method(self._request, name)
+
+    def __call__(self, attr):
+        # type: (str) -> Any
+        """
+        A workaround to get special attributes on the ServerProxy
+        without interfering with the magic __getattr__
+
+        (code from xmlrpclib in Python 2.7)
+        """
+        if attr == "close":
+            return self.__close
+        elif attr == "transport":
+            return self.__transport
+
+        raise AttributeError("Attribute {0} not found".format(attr))
+
+    @property
+    def _notify(self):
+        # type: () -> _Notify
+        """
+        Like __getattr__, but sending a notification request instead of a call
+        """
+        return _Notify(self._request_notify)
+
+    def __close(self):
+        # type: () -> None
+        """
+        Closes the transport layer
+        """
+        self.__transport.close()
+
     def _request(self, methodname, params, rpcid=None):
+        # type: (str, Any, Optional[str]) -> Any
         """
         Calls a method on the remote server
 
@@ -536,11 +590,12 @@ class ServerProxy(XMLServerProxy):
         request = dumps(params, methodname, encoding=self.__encoding,
                         rpcid=rpcid, version=self.__version,
                         config=self._config)
-        response = self._run_request(request)
+        response = self._run_request(request)  # type: Dict[str, Any]
         check_for_errors(response)
         return response['result']
 
     def _request_notify(self, methodname, params, rpcid=None):
+        # type: (str, Any, Optional[str]) -> None
         """
         Calls a method as a notification
 
@@ -555,6 +610,7 @@ class ServerProxy(XMLServerProxy):
         check_for_errors(response)
 
     def _run_request(self, request, notify=False):
+        # type: (str, bool) -> Union[Any, Dict[str, Any], List[Dict[str, Any]]]
         """
         Sends the given request to the remote server
 
@@ -587,45 +643,9 @@ class ServerProxy(XMLServerProxy):
             return_obj = loads(response, self._config)
             return return_obj
 
-    def __getattr__(self, name):
-        """
-        Returns a callable object to call the remote service
-        """
-        if name.startswith("__") and name.endswith("__"):
-            # Don't proxy special methods.
-            raise AttributeError("ServerProxy has no attribute '%s'" % name)
-        # Same as original, just with new _Method reference
-        return _Method(self._request, name)
-
-    def __close(self):
-        """
-        Closes the transport layer
-        """
-        self.__transport.close()
-
-    def __call__(self, attr):
-        """
-        A workaround to get special attributes on the ServerProxy
-        without interfering with the magic __getattr__
-
-        (code from xmlrpclib in Python 2.7)
-        """
-        if attr == "close":
-            return self.__close
-        elif attr == "transport":
-            return self.__transport
-
-        raise AttributeError("Attribute {0} not found".format(attr))
-
-    @property
-    def _notify(self):
-        """
-        Like __getattr__, but sending a notification request instead of a call
-        """
-        return _Notify(self._request_notify)
-
     @contextlib.contextmanager
     def _additional_headers(self, headers):
+        # type: (Dict[str, Any]) -> Generator[ServerProxy, None, None]
         """
         Allows to specify additional headers, to be added inside the with
         block.
@@ -640,6 +660,7 @@ class ServerProxy(XMLServerProxy):
         yield self
         self.__transport.pop_headers(headers)
 
+
 # ------------------------------------------------------------------------------
 
 
@@ -647,6 +668,7 @@ class _Method(XML_Method):
     """
     Some magic to bind an JSON-RPC method to an RPC server.
     """
+
     def __call__(self, *args, **kwargs):
         """
         Sends an RPC request and returns the unmarshalled result
@@ -679,17 +701,21 @@ class _Notify(object):
     """
     Same as _Method, but to send notifications
     """
+
     def __init__(self, request):
+        # type: (Callable) -> None
         """
         Sets the method to call to send a request to the server
         """
         self._request = request
 
     def __getattr__(self, name):
+        # type: (str) -> _Method
         """
         Returns a Method object, to be called as a notification
         """
         return _Method(self._request, name)
+
 
 # ------------------------------------------------------------------------------
 # Batch implementation
@@ -699,7 +725,9 @@ class MultiCallMethod(object):
     """
     Stores calls made to a MultiCall object for batch execution
     """
+
     def __init__(self, method, notify=False, config=jsonrpclib.config.DEFAULT):
+        # type: (str, bool, jsonrpclib.config.Config) -> None
         """
         Sets up the store
 
@@ -708,11 +736,26 @@ class MultiCallMethod(object):
         :param config: Request configuration
         """
         self.method = method
-        self.params = []
+        self.params = []  # type: Any
         self.notify = notify
         self._config = config
 
+    def __repr__(self):
+        """
+        String representation
+        """
+        return str(self.request())
+
+    def __getattr__(self, method):
+        # type: (str) -> MultiCallMethod
+        """
+        Updates the object for a nested call
+        """
+        self.method = "{0}.{1}".format(self.method, method)
+        return self
+
     def __call__(self, *args, **kwargs):
+        # type: (Any, Any) -> None
         """
         Normalizes call parameters
         """
@@ -725,6 +768,7 @@ class MultiCallMethod(object):
             self.params = args
 
     def request(self, encoding=None, rpcid=None):
+        # type: (Optional[str], Optional[str]) -> str
         """
         Returns the request object as JSON-formatted string
         """
@@ -732,25 +776,14 @@ class MultiCallMethod(object):
                      encoding=encoding, rpcid=rpcid, notify=self.notify,
                      config=self._config)
 
-    def __repr__(self):
-        """
-        String representation
-        """
-        return str(self.request())
-
-    def __getattr__(self, method):
-        """
-        Updates the object for a nested call
-        """
-        self.method = "{0}.{1}".format(self.method, method)
-        return self
-
 
 class MultiCallNotify(object):
     """
     Same as MultiCallMethod but for notifications
     """
+
     def __init__(self, multicall, config=jsonrpclib.config.DEFAULT):
+        # type: (MultiCall, jsonrpclib.config.Config) -> None
         """
         Sets ip the store
 
@@ -761,6 +794,7 @@ class MultiCallNotify(object):
         self._config = config
 
     def __getattr__(self, name):
+        # type: (str) -> MultiCallMethod
         """
         Returns the MultiCallMethod to use as a notification
         """
@@ -774,7 +808,9 @@ class MultiCallIterator(object):
     Iterates over the results of a MultiCall.
     Exceptions are raised in response to JSON-RPC faults
     """
+
     def __init__(self, results):
+        # type: (List[Dict[str, Any]]) -> None
         """
         Sets up the results store
         """
@@ -782,6 +818,7 @@ class MultiCallIterator(object):
 
     @staticmethod
     def __get_result(item):
+        # type: (Dict[str, Any]) -> Any
         """
         Checks for error and returns the "real" result stored in a MultiCall
         result.
@@ -790,6 +827,7 @@ class MultiCallIterator(object):
         return item['result']
 
     def __iter__(self):
+        # type: () -> Iterator[Any]
         """
         Iterates over all results
         """
@@ -801,6 +839,7 @@ class MultiCallIterator(object):
         return
 
     def __getitem__(self, i):
+        # type: (int) -> Any
         """
         Returns the i-th object of the results
         """
@@ -829,7 +868,9 @@ class MultiCall(object):
 
     add_result, address = multicall()
     """
+
     def __init__(self, server, config=jsonrpclib.config.DEFAULT):
+        # type: (ServerProxy, jsonrpclib.config.Config) -> None
         """
         Sets up the multicall
 
@@ -837,10 +878,11 @@ class MultiCall(object):
         :param config: Request configuration
         """
         self._server = server
-        self._job_list = []
+        self._job_list = []  # type: List[MultiCallMethod]
         self._config = config
 
     def _request(self):
+        # type: () -> Optional[MultiCallIterator]
         """
         Sends the request to the server and returns the responses
 
@@ -848,23 +890,25 @@ class MultiCall(object):
         """
         if len(self._job_list) < 1:
             # Should we alert? This /is/ pretty obvious.
-            return
+            return None
+
         request_body = "[ {0} ]".format(
             ','.join(job.request() for job in self._job_list))
         responses = self._server._run_request(request_body)
         del self._job_list[:]
-        if not responses:
-            responses = []
-        return MultiCallIterator(responses)
+
+        return MultiCallIterator(responses or [])
 
     @property
     def _notify(self):
+        # type: () -> MultiCallNotify
         """
         Prepares a notification call
         """
         return MultiCallNotify(self, self._config)
 
     def __getattr__(self, name):
+        # type: (str) -> MultiCallMethod
         """
         Registers a method call
         """
@@ -873,6 +917,7 @@ class MultiCall(object):
         return new_job
 
     __call__ = _request
+
 
 # These lines conform to xmlrpclib's "compatibility" line.
 # Not really sure if we should include these, but oh well.
