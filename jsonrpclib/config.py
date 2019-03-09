@@ -5,7 +5,7 @@ The configuration module.
 
 :copyright: Copyright 2019, Thomas Calmant
 :license: Apache License 2.0
-:version: 0.4.0
+:version: 0.5.0
 
 ..
 
@@ -24,12 +24,22 @@ The configuration module.
     limitations under the License.
 """
 
+try:
+    # Typing with mypy
+    # pylint: disable=W0611
+    from typing import Any, Callable, Dict, Optional, Type, Union
+    from ssl import SSLContext
+    from jsonrpclib.impl import AbstractTransport
+    import jsonrpclib.history
+except ImportError:
+    pass
+
 import sys
 
 # ------------------------------------------------------------------------------
 
 # Module version
-__version_info__ = (0, 4, 0)
+__version_info__ = (0, 5, 0)
 __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
@@ -42,7 +52,9 @@ class LocalClasses(dict):
     """
     Associates local classes with their names (used in the jsonclass module)
     """
+
     def add(self, cls, name=None):
+        # type: (Type, Optional[str]) -> None
         """
         Stores a local class
 
@@ -50,6 +62,19 @@ class LocalClasses(dict):
         :param name: Custom name used in the __jsonclass__ attribute
         """
         self[name or cls.__name__] = cls
+
+    def copy(self):
+        # type: () -> "LocalClasses"
+        """
+        Copies the current associations
+
+        :return: A copy of this object
+        """
+        new_obj = LocalClasses()
+        for key, value in self.items():
+            new_obj[key] = value
+        return new_obj
+
 
 # ------------------------------------------------------------------------------
 
@@ -61,11 +86,18 @@ class Config(object):
     You can change serialize_method and ignore_attribute, or use
     the local_classes.add(class) to include "local" classes.
     """
-    def __init__(self, version=2.0, content_type="application/json-rpc",
-                 user_agent=None, use_jsonclass=True,
-                 serialize_method='_serialize',
-                 ignore_attribute='_ignore',
-                 serialize_handlers=None):
+
+    def __init__(
+        self,
+        version=2.0,
+        content_type="application/json-rpc",
+        user_agent=None,
+        use_jsonclass=True,
+        serialize_method="_serialize",
+        ignore_attribute="_ignore",
+        serialize_handlers=None,
+    ):
+        # type: (Union[str, float], str, Optional[str], bool, str, str, Optional[Dict[Type, Callable]]) -> None
         """
         Sets up a configuration of JSONRPClib
 
@@ -97,9 +129,9 @@ class Config(object):
 
         # Default user agent
         if user_agent is None:
-            user_agent = 'jsonrpclib/{0} (Python {1})'.format(
-                __version__,
-                '.'.join(str(ver) for ver in sys.version_info[0:3]))
+            user_agent = "jsonrpclib/{0} (Python {1})".format(
+                __version__, ".".join(str(ver) for ver in sys.version_info[:3])
+            )
         self.user_agent = user_agent
 
         # The list of classes to use for jsonclass translation.
@@ -123,17 +155,25 @@ class Config(object):
         self.serialize_handlers = serialize_handlers or {}
 
     def copy(self):
+        # type: () -> "Config"
         """
         Returns a shallow copy of this configuration bean
 
         :return: A shallow copy of this configuration
         """
-        new_config = Config(self.version, self.content_type, self.user_agent,
-                            self.use_jsonclass, self.serialize_method,
-                            self.ignore_attribute, None)
+        new_config = Config(
+            self.version,
+            self.content_type,
+            self.user_agent,
+            self.use_jsonclass,
+            self.serialize_method,
+            self.ignore_attribute,
+            None,
+        )
         new_config.classes = self.classes.copy()
         new_config.serialize_handlers = self.serialize_handlers.copy()
         return new_config
+
 
 # Default configuration
 DEFAULT = Config()
