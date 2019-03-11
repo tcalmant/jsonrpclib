@@ -5,28 +5,28 @@ Asynchronous JSON-RPC Server
 
 .. warning:: This feature requires Python 3.5+
 
-.. warning:: Work in progress
-
-   This feature is a work in progress. This documentation might not updated as
-   often as the source code.
-
-
 An asynchronous version of the server protocol is provided by the
 ``jsonrpclib.server_protocol_async`` module.
 The latter provides the :class:`AsyncJsonRpcProtocolHandler` class, which can
 be used in any ``asyncio`` protocol implementation.
-
-The following documentation will use the
+Currently, the library comes with a server implementation based on the
 `aiohttp <https://aiohttp.readthedocs.io>`_ library.
 
-.. note:: ``aiohttp`` requires Python 3.5.3+ to work.
+Other implementations can be implemented/contributed.
 
 
-Sample usage with ``aiohttp``
-=============================
+Sample usage with the ``aiohttp`` implementation
+================================================
 
 Imports
 -------
+
+The ``aiohttp`` module is not explicitly imported as the ``AiohttpJsonRpcServer``
+class hides all the initialization process.
+If you want to use a custom ``aiohttp`` instance, you can register the low-level
+request handler: ``AiohttpRequestHandler``.
+
+A high level API request handler will be implemented for version 0.5.0.
 
 .. code-block:: python
 
@@ -38,7 +38,8 @@ Imports
 Prepare the protocol handler
 ----------------------------
 
-The first step is the creation of the protocol handler:
+The first step is the creation of the protocol handler. It has the same API as
+the simple JSON-RPC/XML-RPC servers to register functions.
 
 .. code-block:: python
 
@@ -87,8 +88,6 @@ raise from time to time:
 Execution
 ---------
 
-.. note:: Maybe offer a higher-level ``aiohttp`` request handler
-
 Here, we can manage the life cycle of the HTTP server.
 
 We first create the HTTP request handler based on ``aiohttp``.
@@ -107,4 +106,13 @@ handler, binding address and listened port:
    except KeyboardInterrupt:
        srv.shutdown()
 
-The server is now accessible.
+The endpoint is now accessible on http://localhost:8080/json-rpc.
+
+
+Implement a new asynchronous transport
+======================================
+
+.. warning:: TODO
+
+#. Inherit ``AbstractAsyncTransport``
+#. Implement ``request(self, host, handler, request_body, verbose=False)``
