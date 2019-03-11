@@ -14,7 +14,10 @@ import time
 
 # JSON-RPC library
 from jsonrpclib.server_protocol_async import AsyncJsonRpcProtocolHandler
-from jsonrpclib.impl.aiohttp_impl import AiohttpJsonRpcServer, AiohttpRpcHandler
+from jsonrpclib.impl.aiohttp_impl import (
+    AiohttpJsonRpcServer,
+    AiohttpRequestHandler,
+)
 import jsonrpclib
 
 # Tests
@@ -48,7 +51,7 @@ class AsyncServerTests(TestCompatibility):
 
         # Associate the handler to the protocol wrapper
         self.server = AiohttpJsonRpcServer(
-            AiohttpRpcHandler(handler, "/json-rpc"), "127.0.0.1", 0
+            AiohttpRequestHandler(handler, "/json-rpc"), "127.0.0.1", 0
         )
 
         # Loop shared with the server thread

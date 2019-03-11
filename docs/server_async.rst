@@ -32,7 +32,7 @@ Imports
 
    import asyncio
    from jsonrpclib.server_protocol_async import AsyncJsonRpcProtocolHandler
-   from jsonrpclib.impl.aiohttp_impl import AiohttpRpcHandler, AiohttpJsonRpcServer
+   from jsonrpclib.impl.aiohttp_impl import AiohttpRequestHandler, AiohttpJsonRpcServer
 
 
 Prepare the protocol handler
@@ -100,7 +100,7 @@ handler, binding address and listened port:
 
 .. code-block:: python
 
-   http_handler = AiohttpRpcHandler(json_handler, "/json-rpc")
+   http_handler = AiohttpRequestHandler(json_handler, "/json-rpc")
    srv = AiohttpJsonRpcServer(http_handler, "localhost", 8080)
    try:
        start_sync()

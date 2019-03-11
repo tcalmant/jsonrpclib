@@ -157,7 +157,7 @@ class AiohttpTransport(AbstractAsyncTransport):
 # Server handlers
 
 
-class AiohttpRpcHandler:
+class AiohttpRequestHandler:
     """
     Basic aiohttp request handler
     """
@@ -208,7 +208,7 @@ class AiohttpJsonRpcServer:
     """
 
     def __init__(self, handler, address, port=0):
-        # type: (AiohttpRpcHandler, str, int) -> None
+        # type: (AiohttpRequestHandler, str, int) -> None
         """
         :param handler: The JSON-RPC request handler
         :param address: Binding address of the server
