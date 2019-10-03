@@ -88,6 +88,7 @@ __version__ = ".".join(str(x) for x in __version_info__)
 __docformat__ = "restructuredtext en"
 
 # Prepare the logger
+logging.basicConfig()
 _logger = logging.getLogger(__name__)
 
 # ------------------------------------------------------------------------------
