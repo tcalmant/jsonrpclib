@@ -95,6 +95,21 @@ cd jsonrpclib
 python setup.py install
 ```
 
+## A note on logging
+
+`jsonrpclib-pelix` uses the `logging` module from the standard Python
+library to trace warnings and errors, but doesn't set it up.
+As a result, you have to configure the Python logging to print out traces.
+
+The easiest way to do it is to add those lines at the beginning of your code:
+```python
+import logging
+logging.basiConfig()
+```
+
+More information can be found in the
+[`logging` documentation page](https://docs.python.org/3/library/logging.html).
+
 ## `SimpleJSONRPCServer`
 
 This is identical in usage (or should be) to the `SimpleXMLRPCServer` in the
