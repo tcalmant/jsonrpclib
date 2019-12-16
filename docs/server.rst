@@ -51,7 +51,7 @@ The easiest way to do it is to add those lines at the beginning of your code:
 .. code-block:: python
 
    import logging
-   logging.basiConfig()
+   logging.basicConfig()
 
 More information can be found in the
 `logging documentation page <https://docs.python.org/3/library/logging.html>`_.
