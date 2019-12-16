@@ -52,6 +52,7 @@ As a result, you have to configure the Python logging to print out traces.
 The easiest way to do it is to add those lines at the beginning of your code:
 
 .. code-block:: python
+
    import logging
    logging.basiConfig()
 
