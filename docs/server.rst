@@ -42,9 +42,6 @@ To start protect the server with SSL, use the following snippet:
 A note on logging
 =================
 
-
-## A note on logging
-
 ``jsonrpclib-pelix`` uses the ``logging`` module from the standard Python
 library to trace warnings and errors, but doesn't set it up.
 As a result, you have to configure the Python logging to print out traces.
