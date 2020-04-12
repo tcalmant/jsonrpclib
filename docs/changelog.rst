@@ -3,6 +3,14 @@
 Release Notes
 #############
 
+0.4.1
+=====
+
+:Release Date: 2020-04-12
+
+* Fixed a size computation issue in the request handler (see #42)
+
+
 0.4.0
 =====
 
