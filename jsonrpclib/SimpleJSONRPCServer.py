@@ -442,7 +442,7 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
                 if not raw_chunk:
                     break
                 chunks.append(utils.from_bytes(raw_chunk))
-                size_remaining -= len(chunks[-1])
+                size_remaining -= len(raw_chunk)
             data = ''.join(chunks)
 
             try:
