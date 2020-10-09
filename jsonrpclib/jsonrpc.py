@@ -69,7 +69,7 @@ try:
     # Python 3
     # pylint: disable=F0401,E0611
     from http.client import HTTPConnection
-    from urllib.parse import splittype, splithost
+    from urllib.parse import urlparse
     from xmlrpc.client import Transport as XMLTransport
     from xmlrpc.client import SafeTransport as XMLSafeTransport
     from xmlrpc.client import ServerProxy as XMLServerProxy
@@ -567,7 +567,15 @@ class ServerProxy(XMLServerProxy):
         self._config = config
         self.__version = version or config.version
 
-        schema, uri = splittype(uri)
+        if sys.version_info[0] < 3:
+            schema, uri = splittype(uri)
+            self.__host, self.__handler = splithost(uri)
+        else:
+            su = urlparse(uri)
+            schema = su.scheme
+            self.__host = su.netloc
+            self.__handler = su.path
+
         use_unix = False
         if schema.startswith("unix+"):
             schema = schema[len("unix+"):]
@@ -578,7 +586,6 @@ class ServerProxy(XMLServerProxy):
                           schema)
             raise IOError('Unsupported JSON-RPC protocol.')
 
-        self.__host, self.__handler = splithost(uri)
         if use_unix:
             unix_path = self.__handler
             self.__handler = '/'
