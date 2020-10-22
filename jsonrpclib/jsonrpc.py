@@ -78,7 +78,7 @@ except ImportError:
     # Python 2
     # pylint: disable=F0401,E0611
     from httplib import HTTPConnection
-    from urllib import splittype, splithost
+    from urlparse import urlparse
     from xmlrpclib import Transport as XMLTransport
     from xmlrpclib import SafeTransport as XMLSafeTransport
     from xmlrpclib import ServerProxy as XMLServerProxy
@@ -567,14 +567,10 @@ class ServerProxy(XMLServerProxy):
         self._config = config
         self.__version = version or config.version
 
-        if sys.version_info[0] < 3:
-            schema, uri = splittype(uri)
-            self.__host, self.__handler = splithost(uri)
-        else:
-            su = urlparse(uri)
-            schema = su.scheme
-            self.__host = su.netloc
-            self.__handler = su.path
+        su = urlparse(uri)
+        schema = su.scheme
+        self.__host = su.netloc
+        self.__handler = su.path
 
         use_unix = False
         if schema.startswith("unix+"):
