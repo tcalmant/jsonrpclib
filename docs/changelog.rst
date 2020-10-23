@@ -3,6 +3,19 @@
 Release Notes
 #############
 
+0.4.2
+=====
+
+:Release Date: 2020-10-23
+
+* Use ``urlparse`` from ``urllib.parse`` (Python 3) or ``urlparse`` (Python 2)
+  to prepare for the deprecation of ``urllib.parse.splittype``.
+  Thanks to `@citrus-it <https://github.com/citrus-it>`_ and
+  `@markmcclain <https://github.com/markmcclain>`_ for this fix.
+  (see `#44 <https://github.com/tcalmant/jsonrpclib/pull/44>`_ and
+  `#45 <https://github.com/tcalmant/jsonrpclib/pull/45>`_ for more details)
+
+
 0.4.1
 =====
 
