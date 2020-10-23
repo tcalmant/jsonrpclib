@@ -491,7 +491,10 @@ class UnixHTTPConnection(HTTPConnection):
 
         :param path: Path to the Unix socket
         """
-        HTTPConnection.__init__(self, path, *args, **kwargs)
+
+        # Use localhost as the hostname since a HTTP/1.1 client MUST send a
+        # 'Host:' header.
+        HTTPConnection.__init__(self, 'localhost', *args, **kwargs)
         self.path = path
 
     def connect(self):
