@@ -27,7 +27,8 @@ Aliases to ease access to jsonrpclib classes
 
 # Easy access to utility methods and classes
 from jsonrpclib.jsonrpc import Server, ServerProxy
-from jsonrpclib.jsonrpc import MultiCall, Fault, ProtocolError, AppError
+from jsonrpclib.jsonrpc import ( MultiCall, Fault,
+                                 ProtocolError, AppError, TransportError )
 from jsonrpclib.jsonrpc import loads, dumps, load, dump
 from jsonrpclib.jsonrpc import jloads, jdumps
 import jsonrpclib.history as history

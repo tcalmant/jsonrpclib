@@ -202,6 +202,22 @@ class AppError(ProtocolError):
         return self.args[0][2]
 
 
+class TransportError( ProtocolError ):
+    def __init__(self, url, errcode, errmsg, msg):
+        ProtocolError.__init__(self, url, errcode, errmsg, msg)
+
+        self.url = url
+        self.errcode = errcode
+        self.errmsg = errmsg
+        self.msg = msg
+
+    def __repr__(self):
+        return (
+             "<%s for %s: %s %s>" %
+            (self.__class__.__name__, self.url, self.errcode, self.errmsg)
+        )
+
+
 class JSONParser(object):
     """
     Default JSON parser
@@ -386,7 +402,7 @@ class TransportMixIn(object):
         # Discard any response data and raise exception
         if response.getheader("content-length", 0):
             response.read()
-        raise ProtocolError(host + handler,
+        raise TransportError(host + handler,
                             response.status, response.reason,
                             response.msg)
 

@@ -165,3 +165,14 @@ class InternalTests(unittest.TestCase):
                 def func():
                     return result[i]
                 self.assertRaises(raises[i], func)
+
+    def test_tranport_error(self):
+        """
+        test http error handling
+        """
+        badserver = jsonrpclib.ServerProxy(
+            "http://localhost:{0}/pathdoesnotexist".format(self.port),
+            history=self.history
+        )
+
+        self.assertRaises( jsonrpclib.TransportError, badserver.foo )
