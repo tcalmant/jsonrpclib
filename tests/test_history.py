@@ -13,7 +13,7 @@ from jsonrpclib.history import History
 try:
     import unittest2 as unittest
 except ImportError:
-    import unittest
+    import unittest  # type: ignore
 
 
 # ------------------------------------------------------------------------------

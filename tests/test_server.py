@@ -20,13 +20,15 @@ import unittest
 
 
 def add(a, b):
-    return a+b
+    """ Basic addition """
+    return a + b
 
 
 class PooledServerTests(unittest.TestCase):
     """
     These tests verify that the pooled server works correctly
     """
+
     def test_default_pool(self, pool=None):
         """
         Tests the default pool
@@ -48,9 +50,9 @@ class PooledServerTests(unittest.TestCase):
 
         # Check calls
         for _ in range(5):
-            a, b = random.random(), random.random()
-            result = client.add(a, b)
-            self.assertEqual(result, a+b)
+            rand1, rand2 = random.random(), random.random()
+            result = client.add(rand1, rand2)
+            self.assertEqual(result, rand1 + rand2)
 
         # Close server
         server.shutdown()

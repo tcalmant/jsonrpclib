@@ -25,9 +25,10 @@ class InternalTests(unittest.TestCase):
     These tests verify that the client and server portions of
     jsonrpclib talk to each other properly.
     """
+
     def setUp(self):
         # Set up the server
-        self.server = UtilityServer().start('', 0)
+        self.server = UtilityServer().start("", 0)
         self.port = self.server.get_port()
 
         # Prepare the client
@@ -45,8 +46,7 @@ class InternalTests(unittest.TestCase):
         Utility method to get a proxy to the test server
         """
         return jsonrpclib.ServerProxy(
-            "http://localhost:{0}".format(self.port),
-            history=self.history
+            "http://localhost:{0}".format(self.port), history=self.history
         )
 
     def get_multicall_client(self):
@@ -85,8 +85,7 @@ class InternalTests(unittest.TestCase):
         Mixed positional/keyword args failure test
         """
         client = self.get_client()
-        self.assertRaises(jsonrpclib.ProtocolError,
-                          client.add, (5,), {'y': 10})
+        self.assertRaises(jsonrpclib.ProtocolError, client.add, (5,), {"y": 10})
 
     def test_single_notify(self):
         """
@@ -105,12 +104,13 @@ class InternalTests(unittest.TestCase):
         request = json.loads(self.history.request)
         response = json.loads(self.history.response)
         verify_request = {
-            "jsonrpc": "2.0", "params": [1, 2, 4],
-            "id": "5", "method": "namespace.sum"
+            "jsonrpc": "2.0",
+            "params": [1, 2, 4],
+            "id": "5",
+            "method": "namespace.sum",
         }
-        verify_response = {"jsonrpc": "2.0", "result": 7,
-                           "id": request['id']}
-        verify_request['id'] = request['id']
+        verify_response = {"jsonrpc": "2.0", "result": 7, "id": request["id"]}
+        verify_request["id"] = request["id"]
         self.assertTrue(verify_request == request)
         self.assertTrue(verify_response == response)
 
@@ -160,10 +160,13 @@ class InternalTests(unittest.TestCase):
         result = multicall()
         for i in range(2):
             if not raises[i]:
-                result[i]
+                # Check access
+                _ = result[i]
             else:
+
                 def func():
                     return result[i]
+
                 self.assertRaises(raises[i], func)
 
     def test_tranport_error(self):
@@ -172,7 +175,7 @@ class InternalTests(unittest.TestCase):
         """
         badserver = jsonrpclib.ServerProxy(
             "http://localhost:{0}/pathdoesnotexist".format(self.port),
-            history=self.history
+            history=self.history,
         )
 
-        self.assertRaises( jsonrpclib.TransportError, badserver.foo )
+        self.assertRaises(jsonrpclib.TransportError, badserver.foo)

@@ -8,9 +8,6 @@ Cached thread pool tests
 
 # ------------------------------------------------------------------------------
 
-# Tested module
-import jsonrpclib.threadpool as threadpool
-
 # Standard library
 import threading
 import time
@@ -19,7 +16,11 @@ import time
 try:
     import unittest2 as unittest
 except ImportError:
-    import unittest
+    import unittest  # type: ignore
+
+
+# Tested module
+import jsonrpclib.threadpool as threadpool
 
 # ------------------------------------------------------------------------------
 
@@ -38,6 +39,7 @@ def _trace_call(result_list, result):
     """
     result_list.append(result)
 
+
 # ------------------------------------------------------------------------------
 
 
@@ -45,6 +47,7 @@ class FutureTest(unittest.TestCase):
     """
     Tests the Future utility class
     """
+
     def _simple_call(self, pos1, pos2, result):
         """
         Method that returns the 3 given arguments in a tuple
@@ -79,13 +82,15 @@ class FutureTest(unittest.TestCase):
 
         # Execute the method
         result1, result2, result3 = range(3)
-        future.execute(self._simple_call,
-                       (result1, result2), {"result": result3})
+        future.execute(
+            self._simple_call, (result1, result2), {"result": result3}
+        )
 
         # Assert it is done
         self.assertTrue(future.done(), "Execution flag not updated")
-        self.assertEqual(future.result(), (result1, result2, result3),
-                         "Invalid result")
+        self.assertEqual(
+            future.result(), (result1, result2, result3), "Invalid result"
+        )
 
     def testRaise(self):
         """
@@ -118,8 +123,9 @@ class FutureTest(unittest.TestCase):
         result = object()
 
         # Call the method in a new thread
-        thread = threading.Thread(target=future.execute,
-                                  args=(_slow_call, (1, result), None))
+        thread = threading.Thread(
+            target=future.execute, args=(_slow_call, (1, result), None)
+        )
         thread.daemon = True
         thread.start()
 
@@ -128,7 +134,7 @@ class FutureTest(unittest.TestCase):
         self.assertFalse(future.done(), "Execution flag up")
 
         # Check waiting a little
-        self.assertRaises(OSError, future.result, .2)
+        self.assertRaises(OSError, future.result, 0.2)
         self.assertFalse(future.done(), "Execution flag up")
 
         # Check waiting longer
@@ -228,6 +234,7 @@ class FutureTest(unittest.TestCase):
         future.set_callback(raising, exception)
         self.assertTrue(flag.is_set(), "Callback not called")
 
+
 # ------------------------------------------------------------------------------
 
 
@@ -235,6 +242,7 @@ class ThreadPoolTest(unittest.TestCase):
     """
     Tests the thread pool utility class
     """
+
     def setUp(self):
         """
         Sets up the test
@@ -458,12 +466,14 @@ class ThreadPoolTest(unittest.TestCase):
 
         # Enqueue & check
         for _ in range(10):
-            time.sleep(.1)
-            self.pool.enqueue(_slow_call, .8, None)
-            self.assertLessEqual(self.pool._ThreadPool__nb_threads,
-                                 self.pool._max_threads)
+            time.sleep(0.1)
+            self.pool.enqueue(_slow_call, 0.8, None)
+            self.assertLessEqual(
+                self.pool._ThreadPool__nb_threads, self.pool._max_threads
+            )
 
         self.pool.join()
+
 
 # ------------------------------------------------------------------------------
 

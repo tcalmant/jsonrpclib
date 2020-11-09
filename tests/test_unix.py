@@ -6,16 +6,16 @@ Tests the server & client in Unix socket mode (when available)
 :license: Apache License 2.0
 """
 
-# JSON-RPC library
-from jsonrpclib import ServerProxy
-from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
-
 # Standard library
 import os
 import random
 import socket
 import threading
 import unittest
+
+# JSON-RPC library
+from jsonrpclib import ServerProxy
+from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 
 # ------------------------------------------------------------------------------
 

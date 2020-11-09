@@ -8,27 +8,30 @@ TODO: test custom serialization
 :license: Apache License 2.0
 """
 
-# JSON-RPC library
-from jsonrpclib.jsonclass import dump, load
-import jsonrpclib.config
-
 # Standard library
 import datetime
 import sys
+
 try:
     import unittest2 as unittest
 except ImportError:
-    import unittest
+    import unittest  # type: ignore
 
 try:
     import enum
 
-
     class Color(enum.Enum):
         BLUE = 1
         RED = 2
+
+
 except ImportError:
-    enum = None
+    enum = None  # type: ignore
+
+# JSON-RPC library
+from jsonrpclib.jsonclass import dump, load
+import jsonrpclib.config
+
 
 # ------------------------------------------------------------------------------
 
@@ -37,6 +40,7 @@ class Bean(object):
     """
     Sample bean
     """
+
     def __init__(self):
         """
         Sets up members
@@ -49,15 +53,18 @@ class Bean(object):
         """
         Checks equality
         """
-        return self.public == other.public \
-            and self._protected == other._protected \
+        return (
+            self.public == other.public
+            and self._protected == other._protected
             and self.__private == other.__private
+        )
 
 
 class InheritanceBean(Bean):
     """
     Child bean
     """
+
     def __init__(self):
         """
         Sets up members
@@ -71,16 +78,20 @@ class InheritanceBean(Bean):
         """
         Checks equality
         """
-        return Bean.__eq__(self, other) and self.first == other.first \
-            and self._second == other._second \
+        return (
+            Bean.__eq__(self, other)
+            and self.first == other.first
+            and self._second == other._second
             and self.__third == other.__third
+        )
 
 
 class SlotBean(object):
     """
     Sample bean using slots: private fields are not usable (yet)
     """
-    __slots__ = ('public', '_protected')
+
+    __slots__ = ("public", "_protected")
 
     def __init__(self):
         """
@@ -93,15 +104,17 @@ class SlotBean(object):
         """
         Checks equality
         """
-        return self.public == other.public \
-            and self._protected == other._protected
+        return (
+            self.public == other.public and self._protected == other._protected
+        )
 
 
 class InheritanceSlotBean(SlotBean):
     """
     Child bean using slots
     """
-    __slots__ = ('first', '_second')
+
+    __slots__ = ("first", "_second")
 
     def __init__(self):
         """
@@ -115,16 +128,19 @@ class InheritanceSlotBean(SlotBean):
         """
         Checks equality
         """
-        return SlotBean.__eq__(self, other) \
-            and self.first == other.first \
+        return (
+            SlotBean.__eq__(self, other)
+            and self.first == other.first
             and self._second == other._second
+        )
 
 
 class SecondInheritanceSlotBean(InheritanceSlotBean):
     """
     Grand-child bean using slots
     """
-    __slots__ = ('third', '_fourth')
+
+    __slots__ = ("third", "_fourth")
 
     def __init__(self):
         """
@@ -138,9 +154,12 @@ class SecondInheritanceSlotBean(InheritanceSlotBean):
         """
         Checks equality
         """
-        return InheritanceSlotBean.__eq__(self, other) \
-            and self.third == other.third \
+        return (
+            InheritanceSlotBean.__eq__(self, other)
+            and self.third == other.third
             and self._fourth == other._fourth
+        )
+
 
 # ------------------------------------------------------------------------------
 
@@ -149,6 +168,7 @@ class SerializationTests(unittest.TestCase):
     """
     Checks the behavior of jsonclass
     """
+
     def setUp(self):
         """
         Tests initialization
@@ -167,15 +187,23 @@ class SerializationTests(unittest.TestCase):
             # Reload...
             deserialized = load(serialized)
 
-            self.assertIs(type(serialized), type(value),
-                          "Type changed during serialization")
-            self.assertIs(type(deserialized), type(value),
-                          "Type changed during deserialization")
+            self.assertIs(
+                type(serialized),
+                type(value),
+                "Type changed during serialization",
+            )
+            self.assertIs(
+                type(deserialized),
+                type(value),
+                "Type changed during deserialization",
+            )
 
-            self.assertEqual(serialized, value,
-                             "Value changed during serialization")
-            self.assertEqual(deserialized, value,
-                             "Value changed during deserialization")
+            self.assertEqual(
+                serialized, value, "Value changed during serialization"
+            )
+            self.assertEqual(
+                deserialized, value, "Value changed during deserialization"
+            )
 
     def test_iterable(self):
         """
@@ -192,26 +220,31 @@ class SerializationTests(unittest.TestCase):
             # Reload...
             deserialized = load(serialized)
 
-            self.assertIs(type(serialized), list,
-                          "Dumped iterable should be a list")
-            self.assertIs(type(deserialized), list,
-                          "Loaded iterable should be a list")
+            self.assertIs(
+                type(serialized), list, "Dumped iterable should be a list"
+            )
+            self.assertIs(
+                type(deserialized), list, "Loaded iterable should be a list"
+            )
 
             # Check content
-            self.assertCountEqual(deserialized, tuple_values,
-                                  "Values order changed")
+            self.assertCountEqual(
+                deserialized, tuple_values, "Values order changed"
+            )
 
     def test_dictionary(self):
         """
         Tests dump & load of dictionaries
         """
-        dictionary = {'int': 42,
-                      'float': 42.2,
-                      None: "string",
-                      True: False,
-                      42.1: None,
-                      'dict': {"sub": 1},
-                      "list": [1, 2, 3]}
+        dictionary = {
+            "int": 42,
+            "float": 42.2,
+            None: "string",
+            True: False,
+            42.1: None,
+            "dict": {"sub": 1},
+            "list": [1, 2, 3],
+        }
 
         # Dump it
         serialized = dump(dictionary)
@@ -224,14 +257,20 @@ class SerializationTests(unittest.TestCase):
         """
         Tests dump & load of a custom type
         """
-        types = {Bean: ('public', '_protected', '_Bean__private'),
-                 InheritanceBean: ('public', '_protected', 'first', '_second'),
-                 SlotBean: ('public', '_protected'),
-                 InheritanceSlotBean: ('public', '_protected',
-                                       'first', '_second'),
-                 SecondInheritanceSlotBean: ('public', '_protected',
-                                             'first', '_second',
-                                             'third', '_fourth'), }
+        types = {
+            Bean: ("public", "_protected", "_Bean__private"),
+            InheritanceBean: ("public", "_protected", "first", "_second"),
+            SlotBean: ("public", "_protected"),
+            InheritanceSlotBean: ("public", "_protected", "first", "_second"),
+            SecondInheritanceSlotBean: (
+                "public",
+                "_protected",
+                "first",
+                "_second",
+                "third",
+                "_fourth",
+            ),
+        }
 
         for clazz, fields in types.items():
             # Prepare the bean
@@ -241,29 +280,36 @@ class SerializationTests(unittest.TestCase):
             serialized = dump(data)
 
             # Check serialized content
-            self.assertIn('__jsonclass__', serialized)
+            self.assertIn("__jsonclass__", serialized)
             for field in fields:
                 self.assertIn(field, serialized)
 
             # Check class name
-            self.assertEqual(serialized['__jsonclass__'][0],
-                             '{0}.{1}'.format(clazz.__module__,
-                                              clazz.__name__))
+            self.assertEqual(
+                serialized["__jsonclass__"][0],
+                "{0}.{1}".format(clazz.__module__, clazz.__name__),
+            )
 
             # Reload it
             deserialized = load(serialized)
 
             # Dictionary is left as-is
-            self.assertIn('__jsonclass__', serialized,
-                          "Serialized dictionary has been modified")
-            self.assertFalse(hasattr(deserialized, '__jsonclass__'),
-                             "The deserialized bean shouldn't have a "
-                             "__jsonclass__ attribute")
+            self.assertIn(
+                "__jsonclass__",
+                serialized,
+                "Serialized dictionary has been modified",
+            )
+            self.assertFalse(
+                hasattr(deserialized, "__jsonclass__"),
+                "The deserialized bean shouldn't have a "
+                "__jsonclass__ attribute",
+            )
 
             # Check deserialized value
             self.assertIs(type(deserialized), type(data))
-            self.assertEqual(deserialized, data,
-                             "Source and deserialized bean are not equal")
+            self.assertEqual(
+                deserialized, data, "Source and deserialized bean are not equal"
+            )
 
     def test_config_custom(self):
         """
@@ -274,12 +320,14 @@ class SerializationTests(unittest.TestCase):
 
         # Check if it is correctly serialized
         std_serialized = dump(now)
-        self.assertEqual(std_serialized['__jsonclass__'][0],
-                         'datetime.datetime')
+        self.assertEqual(
+            std_serialized["__jsonclass__"][0], "datetime.datetime"
+        )
 
         # Configure a custom serializer
-        def datetime_serializer(obj, serialize_method, ignore_attribute,
-                                ignore, config):
+        def datetime_serializer(
+            obj, serialize_method, ignore_attribute, ignore, config
+        ):
             """
             Custom datetime serializer (returns an ISO date string)
             """
@@ -305,10 +353,8 @@ class SerializationTests(unittest.TestCase):
         for data in (Color.BLUE, Color.RED):
             # Serialization
             enum_serialized = dump(data)
-            self.assertIn(
-                Color.__name__, enum_serialized['__jsonclass__'][0])
-            self.assertEqual(
-                data.value, enum_serialized['__jsonclass__'][1][0])
+            self.assertIn(Color.__name__, enum_serialized["__jsonclass__"][0])
+            self.assertEqual(data.value, enum_serialized["__jsonclass__"][1][0])
 
             # Loading
             result = load(enum_serialized)

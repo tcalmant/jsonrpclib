@@ -17,8 +17,8 @@ import unittest
 try:
     from http.server import HTTPServer, CGIHTTPRequestHandler
 except ImportError:
-    from BaseHTTPServer import HTTPServer
-    from CGIHTTPServer import CGIHTTPRequestHandler
+    from BaseHTTPServer import HTTPServer  # type: ignore
+    from CGIHTTPServer import CGIHTTPRequestHandler  # type: ignore
 
 # JSON-RPC library
 from jsonrpclib import ServerProxy
@@ -57,9 +57,9 @@ class CGIHandlerTests(unittest.TestCase):
 
             # Check call
             for _ in range(2):
-                a, b = random.random(), random.random()
-                result = client.add(a, b)
-                self.assertEqual(result, a + b)
+                rand1, rand2 = random.random(), random.random()
+                result = client.add(rand1, rand2)
+                self.assertEqual(result, rand1 + rand2)
 
             # Close server
             server.shutdown()
