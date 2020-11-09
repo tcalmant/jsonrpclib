@@ -62,7 +62,7 @@ if sys.version_info[0] < 3:
         Converts the given string into bytes
         """
         # pylint: disable=E0602
-        if type(string) is unicode:
+        if type(string) is unicode:  # noqa: F821
             return str(string)
         return string
 
@@ -118,11 +118,11 @@ try:
         return isinstance(obj, enum.Enum)
 except ImportError:
     # Pre-Python 3.4
-    def is_enum(_):
+    def is_enum(obj):  # pylint: disable=unused-argument
         """
         Before Python 3.4, enumerations didn't exist.
 
-        :param _: Object to test
+        :param obj: Object to test
         :return: Always False
         """
         return False

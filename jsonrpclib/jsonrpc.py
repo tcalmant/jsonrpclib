@@ -77,12 +77,12 @@ try:
 except ImportError:
     # Python 2
     # pylint: disable=F0401,E0611
-    from httplib import HTTPConnection
-    from urlparse import urlparse
-    from xmlrpclib import Transport as XMLTransport
-    from xmlrpclib import SafeTransport as XMLSafeTransport
-    from xmlrpclib import ServerProxy as XMLServerProxy
-    from xmlrpclib import _Method as XML_Method
+    from httplib import HTTPConnection  # type: ignore
+    from urlparse import urlparse  # type: ignore
+    from xmlrpclib import Transport as XMLTransport  # type: ignore
+    from xmlrpclib import SafeTransport as XMLSafeTransport  # type: ignore
+    from xmlrpclib import ServerProxy as XMLServerProxy  # type: ignore
+    from xmlrpclib import _Method as XML_Method  # type: ignore
 
 try:
     # Check GZip support
@@ -90,7 +90,7 @@ try:
 except ImportError:
     # Python can be built without zlib/gzip support
     # pylint: disable=C0103
-    gzip = None
+    gzip = None  # type: ignore
 
 # Library includes
 import jsonrpclib.config
@@ -115,11 +115,11 @@ _logger = logging.getLogger(__name__)
 try:
     # pylint: disable=F0401,E0611
     # Using cjson
-    import cjson
+    import cjson  # type: ignore
     _logger.debug("Using cjson as JSON library")
 
     # Declare cjson methods
-    def jdumps(obj, encoding='utf-8'):
+    def jdumps(obj, encoding='utf-8'):  # pylint: disable=unused-argument
         """
         Serializes ``obj`` to a JSON formatted string, using cjson.
         """
@@ -139,7 +139,7 @@ except ImportError:
         _logger.debug("Using json as JSON library")
     except ImportError:
         try:
-            import simplejson as json
+            import simplejson as json  # type: ignore
             _logger.debug("Using simplejson as JSON library")
         except ImportError:
             _logger.error("No supported JSON library found")
@@ -156,7 +156,7 @@ except ImportError:
             return json.dumps(obj, encoding=encoding)
     else:
         # Python 3
-        def jdumps(obj, encoding='utf-8'):
+        def jdumps(obj, encoding='utf-8'):  # pylint: disable=unused-argument
             """
             Serializes ``obj`` to a JSON formatted string.
             """
@@ -182,7 +182,6 @@ class ProtocolError(Exception):
     * an error message (string)
     * a (code, message) tuple
     """
-    pass
 
 
 class AppError(ProtocolError):
@@ -199,11 +198,21 @@ class AppError(ProtocolError):
 
         :return: The data associated to the error, or None
         """
-        return self.args[0][2]
+        # Don't know why the pylint error shows up
+        return self.args[0][2]  # pylint: disable=unsubscriptable-object
 
 
-class TransportError( ProtocolError ):
+class TransportError(ProtocolError):
+    """
+    Transport error: a specialized protocol error
+    """
     def __init__(self, url, errcode, errmsg, msg):
+        """
+        :param url: Target URL
+        :param errcode: HTTP error code
+        :param errmsg: HTTP error code description
+        :param msg: Exception message
+        """
         ProtocolError.__init__(self, url, errcode, errmsg, msg)
 
         self.url = url
@@ -212,9 +221,8 @@ class TransportError( ProtocolError ):
         self.msg = msg
 
     def __repr__(self):
-        return (
-             "<%s for %s: %s %s>" %
-            (self.__class__.__name__, self.url, self.errcode, self.errmsg)
+        return "<{} for {}: {} {}>".format(
+            type(self).__name__, self.url, self.errcode, self.errmsg
         )
 
 
@@ -273,7 +281,7 @@ class JSONTarget(object):
             try:
                 # Convert the whole final string
                 data = utils.from_bytes(data)
-            except:
+            except (TypeError, ValueError):
                 # Try a pass-through
                 pass
 

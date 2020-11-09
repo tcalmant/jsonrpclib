@@ -45,17 +45,17 @@ try:
     SimpleXMLRPCDispatcher = xmlrpcserver.SimpleXMLRPCDispatcher
     SimpleXMLRPCRequestHandler = xmlrpcserver.SimpleXMLRPCRequestHandler
     CGIXMLRPCRequestHandler = xmlrpcserver.CGIXMLRPCRequestHandler
-    resolve_dotted_attribute = xmlrpcserver.resolve_dotted_attribute
+    resolve_dotted_attribute = xmlrpcserver.resolve_dotted_attribute  # type: ignore  # noqa: E501  # pylint: disable=invalid-name,line-too-long
     import socketserver
 except (ImportError, AttributeError):
     # Python 2 or IronPython
     # pylint: disable=F0401,E0611
-    import SimpleXMLRPCServer as xmlrpcserver
-    SimpleXMLRPCDispatcher = xmlrpcserver.SimpleXMLRPCDispatcher
-    SimpleXMLRPCRequestHandler = xmlrpcserver.SimpleXMLRPCRequestHandler
-    CGIXMLRPCRequestHandler = xmlrpcserver.CGIXMLRPCRequestHandler
-    resolve_dotted_attribute = xmlrpcserver.resolve_dotted_attribute
-    import SocketServer as socketserver
+    import SimpleXMLRPCServer as xmlrpcserver  # type: ignore
+    SimpleXMLRPCDispatcher = xmlrpcserver.SimpleXMLRPCDispatcher  # type: ignore  # noqa: E501  # pylint: disable=invalid-name,line-too-long
+    SimpleXMLRPCRequestHandler = xmlrpcserver.SimpleXMLRPCRequestHandler  # type: ignore  # noqa: E501  # pylint: disable=invalid-name,line-too-long
+    CGIXMLRPCRequestHandler = xmlrpcserver.CGIXMLRPCRequestHandler  # type: ignore  # noqa: E501  # pylint: disable=invalid-name,line-too-long
+    resolve_dotted_attribute = xmlrpcserver.resolve_dotted_attribute  # type: ignore  # noqa: E501  # pylint: disable=invalid-name,line-too-long
+    import SocketServer as socketserver  # type: ignore
 
 try:
     # Windows
@@ -63,14 +63,14 @@ try:
 except ImportError:
     # Other systems
     # pylint: disable=C0103
-    fcntl = None
+    fcntl = None  # type: ignore
 
 try:
     # Python with support for Unix socket
     _AF_UNIX = socket.AF_UNIX
 except AttributeError:
     # Unix sockets are not supported, use a dummy value
-    _AF_UNIX = -1
+    _AF_UNIX = -1  # type: ignore
 
 # Local modules
 from jsonrpclib import Fault

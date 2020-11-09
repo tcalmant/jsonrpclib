@@ -31,12 +31,10 @@ import threading
 
 try:
     # Python 3
-    # pylint: disable=F0401
-    import queue
+    import queue  # pylint: disable=F0401
 except ImportError:
     # Python 2
-    # pylint: disable=F0401
-    import Queue as queue
+    import Queue as queue  # type: ignore # pylint: disable=F0401
 
 # ------------------------------------------------------------------------------
 
