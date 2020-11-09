@@ -20,7 +20,7 @@ Release Notes
   Thanks `@markmcclain <https://github.com/markmcclain>`_ for this fix.
 * Added a ``TransportError`` exception, subclass of ``ProtocolError``, which
   provides more details
-  (see `#46 <https://github.com/tcalmant/jsonrpclib/pull/49>`_).
+  (see `#49 <https://github.com/tcalmant/jsonrpclib/pull/49>`_).
   Thanks `@markmcclain <https://github.com/markmcclain>`_ for this improvement.
 * Added PowerPC 64 architecture (``ppc64le``) to Travis CI runs, to ease the
   integration of new release into RHEL/Ubuntu (see
