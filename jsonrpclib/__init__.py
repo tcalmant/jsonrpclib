@@ -26,13 +26,18 @@ Aliases to ease access to jsonrpclib classes
 """
 
 # Easy access to utility methods and classes
-from jsonrpclib.jsonrpc import Server, ServerProxy
-from jsonrpclib.jsonrpc import ( MultiCall, Fault,
-                                 ProtocolError, AppError, TransportError )
-from jsonrpclib.jsonrpc import loads, dumps, load, dump
-from jsonrpclib.jsonrpc import jloads, jdumps
-import jsonrpclib.history as history
-import jsonrpclib.utils as utils
+from jsonrpclib.jsonrpc import Server, ServerProxy  # noqa: F401
+from jsonrpclib.jsonrpc import (  # noqa: F401
+    MultiCall,
+    Fault,
+    ProtocolError,
+    AppError,
+    TransportError,
+)
+from jsonrpclib.jsonrpc import loads, dumps, load, dump  # noqa: F401
+from jsonrpclib.jsonrpc import jloads, jdumps  # noqa: F401
+import jsonrpclib.history as history  # noqa: F401
+import jsonrpclib.utils as utils  # noqa: F401
 
 # ------------------------------------------------------------------------------
 

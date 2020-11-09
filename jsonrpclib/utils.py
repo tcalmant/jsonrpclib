@@ -42,20 +42,14 @@ if sys.version_info[0] < 3:
     # Python 2
     # pylint: disable=E1101
     import types
+
     try:
-        STRING_TYPES = (
-            types.StringType,
-            types.UnicodeType
-        )
+        STRING_TYPES = (types.StringType, types.UnicodeType)
     except NameError:
         # Python built without unicode support
         STRING_TYPES = (types.StringType,)
 
-    NUMERIC_TYPES = (
-        types.IntType,
-        types.LongType,
-        types.FloatType
-    )
+    NUMERIC_TYPES = (types.IntType, types.LongType, types.FloatType)
 
     def to_bytes(string):
         """
@@ -73,18 +67,14 @@ if sys.version_info[0] < 3:
         if type(data) is str:
             return data
         return str(data)
+
+
 else:
     # Python 3
     # pylint: disable=E1101
-    STRING_TYPES = (
-        bytes,
-        str
-    )
+    STRING_TYPES = (bytes, str)
 
-    NUMERIC_TYPES = (
-        int,
-        float
-    )
+    NUMERIC_TYPES = (int, float)
 
     def to_bytes(string):
         """
@@ -102,6 +92,7 @@ else:
             return data
         return str(data, "UTF-8")
 
+
 # ------------------------------------------------------------------------------
 # Enumerations
 
@@ -116,6 +107,8 @@ try:
         :return: True if the object is an enumeration item
         """
         return isinstance(obj, enum.Enum)
+
+
 except ImportError:
     # Pre-Python 3.4
     def is_enum(obj):  # pylint: disable=unused-argument
@@ -127,6 +120,7 @@ except ImportError:
         """
         return False
 
+
 # ------------------------------------------------------------------------------
 # Common
 
@@ -135,15 +129,8 @@ DictType = dict
 ListType = list
 TupleType = tuple
 
-ITERABLE_TYPES = (
-    list,
-    set, frozenset,
-    tuple
-)
+ITERABLE_TYPES = (list, set, frozenset, tuple)
 
-VALUE_TYPES = (
-    bool,
-    type(None)
-)
+VALUE_TYPES = (bool, type(None))
 
 PRIMITIVE_TYPES = STRING_TYPES + NUMERIC_TYPES + VALUE_TYPES

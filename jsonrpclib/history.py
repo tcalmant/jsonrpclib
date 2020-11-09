@@ -42,6 +42,7 @@ class History(object):
     each request cycle in order to keep it from clogging
     memory.
     """
+
     def __init__(self):
         """
         Sets up members
