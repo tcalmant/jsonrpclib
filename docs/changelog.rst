@@ -6,7 +6,7 @@ Release Notes
 0.4.2
 =====
 
-:Release Date: 2020-10-23
+:Release Date: 2020-11-09
 
 * Use ``urlparse`` from ``urllib.parse`` (Python 3) or ``urlparse`` (Python 2)
   to prepare for the deprecation of ``urllib.parse.splittype``.
@@ -14,7 +14,18 @@ Release Notes
   `@markmcclain <https://github.com/markmcclain>`_ for this fix.
   (see `#44 <https://github.com/tcalmant/jsonrpclib/pull/44>`_ and
   `#45 <https://github.com/tcalmant/jsonrpclib/pull/45>`_ for more details)
-
+* Unix socket clients now send ``localhost`` as ``Host:`` HTTP field instead of
+  the path to the socket
+  (see `#47 <https://github.com/tcalmant/jsonrpclib/pull/47>`_).
+  Thanks `@markmcclain <https://github.com/markmcclain>`_ for this fix.
+* Added a ``TransportError`` exception, subclass of ``ProtocolError``, which
+  provides more details
+  (see `#46 <https://github.com/tcalmant/jsonrpclib/pull/49>`_).
+  Thanks `@markmcclain <https://github.com/markmcclain>`_ for this improvement.
+* Added PowerPC 64 architecture (``ppc64le``) to Travis CI runs, to ease the
+  integration of new release into RHEL/Ubuntu (see
+  `#50 <https://github.com/tcalmant/jsonrpclib/pull/50>`_ by
+  `@kishorkunal-raj <https://github.com/kishorkunal-raj>`_)
 
 0.4.1
 =====
