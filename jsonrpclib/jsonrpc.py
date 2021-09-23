@@ -629,6 +629,7 @@ class ServerProxy(XMLServerProxy):
         schema = su.scheme
         self.__host = su.netloc
         self.__handler = su.path
+        self.__query_string = su.query
 
         use_unix = False
         if schema.startswith("unix+"):
@@ -727,8 +728,14 @@ class ServerProxy(XMLServerProxy):
         if self.__history is not None:
             self.__history.add_request(request)
 
+        # Add the query string to the path
+        if not self.__query_string:
+            path_qs = self.__handler
+        else:
+            path_qs = "{}?{}".format(self.__handler, self.__query_string)
+
         response = self.__transport.request(
-            self.__host, self.__handler, request, verbose=self.__verbose
+            self.__host, path_qs, request, verbose=self.__verbose
         )
 
         # Here, the XMLRPC library translates a single list
