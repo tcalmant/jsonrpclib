@@ -6,15 +6,15 @@ Tests the pooled server
 :license: Apache License 2.0
 """
 
-# JSON-RPC library
-from jsonrpclib import ServerProxy
-from jsonrpclib.SimpleJSONRPCServer import PooledJSONRPCServer
-from jsonrpclib.threadpool import ThreadPool
-
 # Standard library
 import random
 import threading
 import unittest
+
+# JSON-RPC library
+from jsonrpclib import ServerProxy
+from jsonrpclib.SimpleJSONRPCServer import PooledJSONRPCServer
+from jsonrpclib.threadpool import ThreadPool
 
 # ------------------------------------------------------------------------------
 
@@ -42,22 +42,23 @@ class PooledServerTests(unittest.TestCase):
         thread.daemon = True
         thread.start()
 
-        # Find its port
-        port = server.socket.getsockname()[1]
+        try:
+            # Find its port
+            port = server.socket.getsockname()[1]
 
-        # Make the client
-        client = ServerProxy("http://localhost:{0}".format(port))
+            # Make the client
+            client = ServerProxy("http://localhost:{0}".format(port))
 
-        # Check calls
-        for _ in range(5):
-            rand1, rand2 = random.random(), random.random()
-            result = client.add(rand1, rand2)
-            self.assertEqual(result, rand1 + rand2)
-
-        # Close server
-        server.shutdown()
-        server.server_close()
-        thread.join()
+            # Check calls
+            for _ in range(5):
+                rand1, rand2 = random.random(), random.random()
+                result = client.add(rand1, rand2)
+                self.assertEqual(result, rand1 + rand2)
+        finally:
+            # Close server
+            server.shutdown()
+            server.server_close()
+            thread.join()
 
     def test_custom_pool(self):
         """
@@ -66,4 +67,7 @@ class PooledServerTests(unittest.TestCase):
         # Setup the pool
         pool = ThreadPool(2)
         pool.start()
-        self.test_default_pool(pool)
+        try:
+            self.test_default_pool(pool)
+        finally:
+            pool.stop()
