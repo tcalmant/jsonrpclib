@@ -21,7 +21,10 @@ before_install:
   - pip install nose coverage coveralls
 
 script:
-  - nosetests -v --with-coverage --cover-package=jsonrpclib tests
+  - JSONRPCLIB_TEST_EXPECTED_LIB=json nosetests -v --with-coverage --cover-package=jsonrpclib tests
+  - pip install ujson && (JSONRPCLIB_TEST_EXPECTED_LIB=ujson nosetests -v --with-coverage --cover-package=jsonrpclib tests/test_jsonlib.py ; pip uninstall -y ujson) || exit 0
+  - pip install simplejson && (JSONRPCLIB_TEST_EXPECTED_LIB=simplejson nosetests -v --with-coverage --cover-package=jsonrpclib tests/test_jsonlib.py ; pip uninstall -y simplejson) || exit 0
+  - pip install python-cjson && (JSONRPCLIB_TEST_EXPECTED_LIB=cjson nosetests -v --with-coverage --cover-package=jsonrpclib tests/test_jsonlib.py ; pip uninstall -y python-cjson) || exit 0
 
 after_success:
   - coveralls
