@@ -135,20 +135,28 @@ class TestJsonLibLoading(unittest.TestCase):
         # Check if the expected best is right
         self._check_expected_best("json")
 
-        # Force methods to raise an exception
-        json.loads = _fake_loads
-        json.dumps = _fake_dumps
+        try:
+            # Force methods to raise an exception
+            json.loads = _fake_loads
+            json.dumps = _fake_dumps
 
-        # Reload the module
-        imp.reload(jsonlib)
+            # Reload the module
+            imp.reload(jsonlib)
 
-        # Check the methods
-        load_method, dump_method = jsonlib.get_handler_methods()
-        self.assertRaises(NotImplementedError, load_method, TEST_INPUT_MARKER)
-        self.assertRaises(NotImplementedError, dump_method, TEST_OUTPUT_MARKER)
-        self.assertRaises(
-            NotImplementedError, dump_method, TEST_OUTPUT_MARKER, "encoding"
-        )
+            # Check the methods
+            load_method, dump_method = jsonlib.get_handler_methods()
+            self.assertRaises(
+                NotImplementedError, load_method, TEST_INPUT_MARKER
+            )
+            self.assertRaises(
+                NotImplementedError, dump_method, TEST_OUTPUT_MARKER
+            )
+            self.assertRaises(
+                NotImplementedError, dump_method, TEST_OUTPUT_MARKER, "encoding"
+            )
+        finally:
+            # Reload the module
+            imp.reload(json)
 
     def test_cjson(self):
         """
@@ -162,20 +170,28 @@ class TestJsonLibLoading(unittest.TestCase):
         # Check if the expected best is right
         self._check_expected_best("cjson")
 
-        # Force methods to raise an exception
-        cjson.decode = _fake_loads
-        cjson.encode = _fake_dumps
+        try:
+            # Force methods to raise an exception
+            cjson.decode = _fake_loads
+            cjson.encode = _fake_dumps
 
-        # Reload the module
-        imp.reload(jsonlib)
+            # Reload the module
+            imp.reload(jsonlib)
 
-        # Check the methods
-        load_method, dump_method = jsonlib.get_handler_methods()
-        self.assertRaises(NotImplementedError, load_method, TEST_INPUT_MARKER)
-        self.assertRaises(NotImplementedError, dump_method, TEST_OUTPUT_MARKER)
-        self.assertRaises(
-            NotImplementedError, dump_method, TEST_OUTPUT_MARKER, "encoding"
-        )
+            # Check the methods
+            load_method, dump_method = jsonlib.get_handler_methods()
+            self.assertRaises(
+                NotImplementedError, load_method, TEST_INPUT_MARKER
+            )
+            self.assertRaises(
+                NotImplementedError, dump_method, TEST_OUTPUT_MARKER
+            )
+            self.assertRaises(
+                NotImplementedError, dump_method, TEST_OUTPUT_MARKER, "encoding"
+            )
+        finally:
+            # Reload the module
+            imp.reload(cjson)
 
     def test_ujson(self):
         """
@@ -189,26 +205,34 @@ class TestJsonLibLoading(unittest.TestCase):
         # Check if the expected best is right
         self._check_expected_best("ujson")
 
-        # Force methods to raise an exception
-        ujson.loads = _fake_loads
-        ujson.dumps = _fake_dumps
+        try:
+            # Force methods to raise an exception
+            ujson.loads = _fake_loads
+            ujson.dumps = _fake_dumps
 
-        # Reload the module
-        imp.reload(jsonlib)
+            # Reload the module
+            imp.reload(jsonlib)
 
-        # Check the handler
-        handler = jsonlib.get_handler()
-        self.assertIsInstance(handler, jsonlib.UJsonHandler)
+            # Check the handler
+            handler = jsonlib.get_handler()
+            self.assertIsInstance(handler, jsonlib.UJsonHandler)
 
-        # Check the methods
-        load_method, dump_method = jsonlib.get_handler_methods()
-        self.assertIs(ujson.loads, _fake_loads)
-        self.assertIs(load_method, _fake_loads)
-        self.assertRaises(NotImplementedError, load_method, TEST_INPUT_MARKER)
-        self.assertRaises(NotImplementedError, dump_method, TEST_OUTPUT_MARKER)
-        self.assertRaises(
-            NotImplementedError, dump_method, TEST_OUTPUT_MARKER, "encoding"
-        )
+            # Check the methods
+            load_method, dump_method = jsonlib.get_handler_methods()
+            self.assertIs(ujson.loads, _fake_loads)
+            self.assertIs(load_method, _fake_loads)
+            self.assertRaises(
+                NotImplementedError, load_method, TEST_INPUT_MARKER
+            )
+            self.assertRaises(
+                NotImplementedError, dump_method, TEST_OUTPUT_MARKER
+            )
+            self.assertRaises(
+                NotImplementedError, dump_method, TEST_OUTPUT_MARKER, "encoding"
+            )
+        finally:
+            # Reload the module
+            imp.reload(ujson)
 
     def test_simplejson(self):
         """
@@ -222,17 +246,25 @@ class TestJsonLibLoading(unittest.TestCase):
         # Check if the expected best is right
         self._check_expected_best("simplejson")
 
-        # Force methods to raise an exception
-        simplejson.loads = _fake_loads
-        simplejson.dumps = _fake_dumps
+        try:
+            # Force methods to raise an exception
+            simplejson.loads = _fake_loads
+            simplejson.dumps = _fake_dumps
 
-        # Reload the module
-        imp.reload(jsonlib)
+            # Reload the module
+            imp.reload(jsonlib)
 
-        # Check the methods
-        load_method, dump_method = jsonlib.get_handler_methods()
-        self.assertRaises(NotImplementedError, load_method, TEST_INPUT_MARKER)
-        self.assertRaises(NotImplementedError, dump_method, TEST_OUTPUT_MARKER)
-        self.assertRaises(
-            NotImplementedError, dump_method, TEST_OUTPUT_MARKER, "encoding"
-        )
+            # Check the methods
+            load_method, dump_method = jsonlib.get_handler_methods()
+            self.assertRaises(
+                NotImplementedError, load_method, TEST_INPUT_MARKER
+            )
+            self.assertRaises(
+                NotImplementedError, dump_method, TEST_OUTPUT_MARKER
+            )
+            self.assertRaises(
+                NotImplementedError, dump_method, TEST_OUTPUT_MARKER, "encoding"
+            )
+        finally:
+            # Reload the module
+            imp.reload(simplejson)
