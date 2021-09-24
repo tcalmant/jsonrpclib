@@ -112,8 +112,7 @@ _logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------
 # JSON library selection
 
-jdumps = jsonlib.HANDLER.dumps
-jloads = jsonlib.HANDLER.loads
+jloads, jdumps = jsonlib.get_handler_methods()
 
 # ------------------------------------------------------------------------------
 # XMLRPClib re-implementations

@@ -5,11 +5,6 @@ Loads the "best" Python library available for the current interpreter and
 provides a single interface for all
 """
 
-try:
-    from typing import Any
-except ImportError:
-    pass
-
 import json
 import sys
 
@@ -22,37 +17,18 @@ class JsonHandler(object):
     Parent class for JSON handlers
     """
 
-    @staticmethod
-    def is_loaded():
-        # type: () -> bool
+    def get_methods(self):
         """
-        Flag that indicates if an optimized library could be loaded or not
-        """
-        return False
-
-    def loads(self, json_string):
-        # type: (str) -> Any
-        """
-        Deserializes the given JSON string to a Python object
-
-        :param json_string: A string containing a JSON value/object/array
-        :return: The loaded object (dict)/array (list)/value
-        """
-        return json.loads(json_string)
-
-    def dumps(self, obj, encoding="utf-8"):
-        # type: (Any, str) -> str
-        """
-        Serializes ``obj`` to a JSON formatted string
-
-        :param obj: Object to serialize
-        :param encoding: Encoding of the result string
-        :return: The JSON string describing the given value
+        Returns the loads and dumps methods
         """
         if PYTHON_2:
-            return json.dumps(obj, encoding=encoding)
+            # We use the Py2 API with an encoding argument
+            return json.loads, json.dumps
 
-        return json.dumps(obj)
+        def dumps_py3(obj, encoding="utf-8"):
+            return json.dumps(obj)
+
+        return json.loads, dumps_py3
 
 
 class CJsonHandler(JsonHandler):
@@ -60,23 +36,13 @@ class CJsonHandler(JsonHandler):
     Handler based on cjson
     """
 
-    try:
-        from cjson import (
-            decode as loads,
-            encode,
-        )  # pylint: disable=C0415, E0602
+    def get_methods(self):
+        import cjson
 
-        @staticmethod
-        def is_loaded():
-            return True
+        def dumps_cjson(obj, encoding="utf-8"):
+            return cjson.encode(obj)
 
-        def dumps(
-            self, obj, encoding="utf-8"
-        ):  # pylint: disable=unused-argument
-            return encode(obj)
-
-    except ImportError:
-        pass
+        return cjson.decode, dumps_cjson
 
 
 class SimpleJsonHandler(JsonHandler):
@@ -84,15 +50,10 @@ class SimpleJsonHandler(JsonHandler):
     Handler based on simplejson
     """
 
-    try:
-        from simplejson import loads, dumps  # pylint: disable=C0415, E0602
+    def get_methods(self):
+        import simplejson
 
-        @staticmethod
-        def is_loaded():
-            return True
-
-    except ImportError:
-        pass
+        return simplejson.loads, simplejson.dumps
 
 
 class UJsonHandler(JsonHandler):
@@ -100,34 +61,45 @@ class UJsonHandler(JsonHandler):
     Handler based on ujson
     """
 
-    try:
-        from ujson import (
-            loads,
-            dumps as _dumps,
-        )  # pylint: disable=C0415, E0602
+    def get_methods(self):
+        import ujson
 
-        @staticmethod
-        def is_loaded():
-            return True
+        print("ujson-jsonlib:", id(ujson))
 
-        def dumps(
-            self, obj, encoding="utf-8"
-        ):  # pylint: disable=unused-argument
-            return _dumps(obj)
+        def dumps_ujson(obj, encoding="utf-8"):
+            return ujson.dumps(obj)
 
-    except ImportError:
-        pass
+        print("jsonlib:", ujson.loads)
+        return ujson.loads, dumps_ujson
 
 
-for handler_class in (UJsonHandler, SimpleJsonHandler, CJsonHandler):
-    HANDLER = handler_class()
-    if HANDLER.is_loaded():
+def get_handler():
+    # type: () -> JsonHandler
+    """
+    Returns the best available Json parser
+    """
+    for handler_class in (UJsonHandler, SimpleJsonHandler, CJsonHandler):
+        handler = handler_class()
         try:
-            # Check if the library really works
-            HANDLER.loads(HANDLER.dumps({"answer": 42}))
-        except Exception:
-            continue
+            loader, dumper = handler.get_methods()
+        except ImportError:
+            # Library is missing
+            pass
         else:
-            break
-else:
-    HANDLER = JsonHandler()
+            try:
+                # Check if the library really works
+                loader(dumper({"answer": 42}))
+                break
+            except Exception:
+                pass
+    else:
+        handler = JsonHandler()
+
+    return handler
+
+
+def get_handler_methods():
+    """
+    Returns the load and dump methods of the best Json handler
+    """
+    return get_handler().get_methods()
