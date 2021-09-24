@@ -18,7 +18,8 @@ env:
     - COVERAGE_PROCESS_START=".coveragerc"
 
 before_install:
-  - pip install nose coverage coveralls
+  - pip install nose coverage
+  - pip install coveralls || exit 0
 
 script:
   - JSONRPCLIB_TEST_EXPECTED_LIB=json nosetests -v --with-coverage --cover-package=jsonrpclib tests
@@ -27,4 +28,4 @@ script:
   - pip install python-cjson && (JSONRPCLIB_TEST_EXPECTED_LIB=cjson nosetests -v --with-coverage --cover-package=jsonrpclib tests/test_jsonlib.py ; pip uninstall -y python-cjson) || exit 0
 
 after_success:
-  - coveralls
+  - coveralls || exit 0
