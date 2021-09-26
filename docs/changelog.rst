@@ -3,6 +3,21 @@
 Release Notes
 #############
 
+0.4.3
+=====
+
+:Release Date: 2021-09-26
+
+* ``ServerProxy`` keeps the given query string, as before 0.4.2.
+  This release fixes `#51 <https://github.com/tcalmant/jsonrpclib/issues/51>`_,
+  and a unit test has been added to ensure there won't be any regression again on this feature
+* JSON library selection is now made in the ``jsonrpclib.jsonlib`` module,
+  using a set of handler classes. This will ease the addition of new libraries.
+* Added support for ujson
+* Fixed Travis-CI builds (migrated from .org to .com and bypassed the coveralls issue with ppc64le)
+* Fixed an issue with the CGI test in Python 3-only environments
+
+
 0.4.2
 =====
 
