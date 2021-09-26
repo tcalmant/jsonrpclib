@@ -24,4 +24,4 @@ script:
   - ./docker_test.sh
 
 after_success:
-  - if [[ "$TRAVIS_CPU_ARCH" != "ppc64le" ]] then; pip install coveralls && coveralls; fi;
+  - if [[ "$TRAVIS_CPU_ARCH" != "ppc64le" ]]; then pip install coveralls && coveralls; fi;
