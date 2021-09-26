@@ -8,7 +8,16 @@ Tests JSON-RPC compatibility
 
 # Standard library
 import json
+import random
+import threading
 import unittest
+
+try:
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from urllib.parse import urlparse
+except ImportError:
+    from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+    from urlparse import urlparse
 
 # JSON-RPC library
 import jsonrpclib
@@ -279,3 +288,64 @@ class TestCompatibility(unittest.TestCase):
         for req, valid_req in zip(request, valid_request):
             self.assertTrue(req == valid_req)
         self.assertTrue(self.history.response == "")
+
+    def test_url_query_string(self):
+        """ Tests if the query string arguments are kept """
+        # Prepare a simple server
+        class ReqHandler(BaseHTTPRequestHandler):
+            """
+            Basic request handler that returns parameters
+            """
+
+            def do_POST(self):
+                parsed = urlparse(self.path)
+                result = {
+                    "id": 0,
+                    "error": None,
+                    "result": {
+                        "path": parsed.path,
+                        "qs": parsed.query,
+                    },
+                }
+                result_str = json.dumps(result).encode("utf8")
+
+                self.send_response(200)
+                self.send_header("content-type", "application/json")
+                self.send_header("content-length", str(len(result_str)))
+                self.end_headers()
+
+                self.wfile.write(result_str)
+
+        # Start it
+        httpd = HTTPServer(("", 0), ReqHandler)
+
+        # Run it in a thread
+        thread = threading.Thread(target=httpd.serve_forever)
+        thread.daemon = True
+        thread.start()
+
+        # Prepare a random value
+        arg = str(random.randint(0, 1024))
+
+        # Prepare the client
+        client = jsonrpclib.ServerProxy(
+            "http://localhost:{port}/test?q={arg}".format(
+                port=httpd.server_port, arg=arg
+            )
+        )
+
+        # Run a query
+        result = client.test()
+
+        # Stop the server
+        httpd.shutdown()
+        httpd.server_close()
+
+        # Check the result
+        self.assertEqual(result["path"], "/test", "Invalid path")
+        self.assertEqual(
+            result["qs"], "q={}".format(arg), "Invalid query string"
+        )
+
+        # Wait the server to stop (5 sec max)
+        thread.join(5)
