@@ -3,6 +3,15 @@
 Release Notes
 #############
 
+0.4.3.1
+=======
+
+:Release Date: 2021-09-28
+
+* Removed remaining print statements
+  (`#52 <https://github.com/tcalmant/jsonrpclib/issues/52>`_)
+
+
 0.4.3
 =====
 
