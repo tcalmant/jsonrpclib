@@ -97,12 +97,9 @@ class UJsonHandler(JsonHandler):
     def get_methods(self):
         import ujson
 
-        print("ujson-jsonlib:", id(ujson))
-
         def dumps_ujson(obj, encoding="utf-8"):
             return ujson.dumps(obj)
 
-        print("jsonlib:", ujson.loads)
         return ujson.loads, dumps_ujson
 
 
