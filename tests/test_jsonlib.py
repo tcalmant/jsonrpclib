@@ -6,13 +6,16 @@ Tests the loading of different JSON libraries
 :license: Apache License 2.0
 """
 
-import imp
+try:
+    from importlib import reload as imp_reload
+except ImportError:
+    from imp import reload as imp_reload
+
 import json
 import os
 import unittest
 
 import jsonrpclib.jsonlib as jsonlib
-
 
 TEST_INPUT_MARKER = '"__test_input__"'
 TEST_OUTPUT_MARKER = '"__test_output__"'
@@ -110,7 +113,7 @@ class TestJsonLibLoading(unittest.TestCase):
         expected_best = self._get_expected_best(available)
 
         # Test the handler's choice
-        imp.reload(jsonlib)
+        imp_reload(jsonlib)
         handler = jsonlib.get_handler()
 
         # Check its name
@@ -141,7 +144,7 @@ class TestJsonLibLoading(unittest.TestCase):
             json.dumps = _fake_dumps
 
             # Reload the module
-            imp.reload(jsonlib)
+            imp_reload(jsonlib)
 
             # Check the methods
             load_method, dump_method = jsonlib.get_handler_methods()
@@ -156,7 +159,7 @@ class TestJsonLibLoading(unittest.TestCase):
             )
         finally:
             # Reload the module
-            imp.reload(json)
+            imp_reload(json)
 
     def test_cjson(self):
         """
@@ -176,7 +179,7 @@ class TestJsonLibLoading(unittest.TestCase):
             cjson.encode = _fake_dumps
 
             # Reload the module
-            imp.reload(jsonlib)
+            imp_reload(jsonlib)
 
             # Check the methods
             load_method, dump_method = jsonlib.get_handler_methods()
@@ -191,7 +194,7 @@ class TestJsonLibLoading(unittest.TestCase):
             )
         finally:
             # Reload the module
-            imp.reload(cjson)
+            imp_reload(cjson)
 
     def test_ujson(self):
         """
@@ -211,7 +214,7 @@ class TestJsonLibLoading(unittest.TestCase):
             ujson.dumps = _fake_dumps
 
             # Reload the module
-            imp.reload(jsonlib)
+            imp_reload(jsonlib)
 
             # Check the handler
             handler = jsonlib.get_handler()
@@ -232,7 +235,7 @@ class TestJsonLibLoading(unittest.TestCase):
             )
         finally:
             # Reload the module
-            imp.reload(ujson)
+            imp_reload(ujson)
 
     def test_simplejson(self):
         """
@@ -252,7 +255,7 @@ class TestJsonLibLoading(unittest.TestCase):
             simplejson.dumps = _fake_dumps
 
             # Reload the module
-            imp.reload(jsonlib)
+            imp_reload(jsonlib)
 
             # Check the methods
             load_method, dump_method = jsonlib.get_handler_methods()
@@ -267,4 +270,4 @@ class TestJsonLibLoading(unittest.TestCase):
             )
         finally:
             # Reload the module
-            imp.reload(simplejson)
+            imp_reload(simplejson)
