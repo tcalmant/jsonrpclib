@@ -3,7 +3,19 @@
 Release Notes
 #############
 
-0.4.3.1
+0.4.3.2
+=======
+
+:Release Date: 2022-02-19
+
+* Reordered ``PooledJSONRPCServer`` inheritance definition
+  (`#55 <https://github.com/tcalmant/jsonrpclib/issues/55>`)
+* Migration of Continuous Integration:
+  * Use PyTest instead of Nose
+  * Run CI with GitHub Actions instead of Travis-CI
+
+
+0.4.3.2
 =======
 
 :Release Date: 2021-09-28
