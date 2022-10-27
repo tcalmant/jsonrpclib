@@ -628,7 +628,7 @@ class ServerProxy(XMLServerProxy):
             config=self._config,
         )
         response = self._run_request(request)
-        check_for_errors(response)
+        check_for_errors(response, False)
         return response["result"]
 
     def _request_notify(self, methodname, params, rpcid=None):
@@ -649,7 +649,7 @@ class ServerProxy(XMLServerProxy):
             config=self._config,
         )
         response = self._run_request(request, notify=True)
-        check_for_errors(response)
+        check_for_errors(response, True)
 
     def _run_request(self, request, notify=False):
         """
@@ -903,7 +903,7 @@ class MultiCallIterator(object):
         Checks for error and returns the "real" result stored in a MultiCall
         result.
         """
-        check_for_errors(item)
+        check_for_errors(item, False)
         return item["result"]
 
     def __iter__(self):
@@ -1349,20 +1349,24 @@ def loads(data, config=jsonrpclib.config.DEFAULT):
 # ------------------------------------------------------------------------------
 
 
-def check_for_errors(result):
+def check_for_errors(result, expect_none):
     """
     Checks if a result dictionary signals an error
 
     :param result: A result dictionary
+    :param expect_none: If True, only accept ``None``, else reject it
     :raise TypeError: Invalid parameter
     :raise NotImplementedError: Unknown JSON-RPC version
     :raise ValueError: Invalid dictionary content
     :raise ProtocolError: An error occurred on the server side
     :return: The result parameter
     """
+    if expect_none and result is None:
+        # Notification / expected None
+        return
+
     if not result:
-        # Notification
-        return result
+        raise TypeError("Empty response.")
 
     if not isinstance(result, utils.DictType):
         # Invalid argument
