@@ -176,6 +176,9 @@ def dump(
         params, attrs = serialize()
         return_obj["__jsonclass__"].append(params)
         return_obj.update(attrs)
+    elif utils.is_decimal(obj):
+        # Add parameter for Decimal that works with JSON
+        return_obj["__jsonclass__"].append([str(obj)])
     elif utils.is_enum(obj):
         # Add parameters for enumerations
         return_obj["__jsonclass__"].append([obj.value])

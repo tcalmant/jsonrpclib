@@ -122,6 +122,34 @@ except ImportError:
 
 
 # ------------------------------------------------------------------------------
+# Decimal
+
+try:
+    import decimal
+
+    def is_decimal(obj):
+        """
+        Checks if an object is a decimal.Decimal
+
+        :param obj: Object to test
+        :return: True if the object is a Decimal
+        """
+        return isinstance(obj, decimal.Decimal)
+
+
+except ImportError:
+    # Decimal introduced in Python 2.4
+    def is_decimal(obj):  # pylint: disable=unused-argument
+        """
+        Before Python 2.4, Decimal did not exist.
+
+        :param obj: Object to test
+        :return: Always False
+        """
+        return False
+
+
+# ------------------------------------------------------------------------------
 # Common
 
 DictType = dict

@@ -28,6 +28,12 @@ try:
 except ImportError:
     enum = None  # type: ignore
 
+try:
+    from decimal import Decimal
+except ImportError:
+    Decimal = None
+
+
 # JSON-RPC library
 from jsonrpclib.jsonclass import dump, load
 import jsonrpclib.config
@@ -365,3 +371,17 @@ class SerializationTests(unittest.TestCase):
         serialized = dump(data)
         result = load(serialized)
         self.assertListEqual(data, result)
+
+    def test_decimal(self):
+        """
+        Tests the serialization of decimal.Decimal
+        """
+        if Decimal is None:
+            self.skipTest("decimal package not available.")
+
+        for d in (1.1, "3.2"):
+            d_dec = Decimal(d)
+            serialized = dump(d_dec)
+            result = load(serialized)
+            self.assertIsInstance(result, Decimal)
+            self.assertEqual(result, d_dec)
