@@ -4,13 +4,13 @@
 Installation script
 
 :authors: Josh Marshall, Thomas Calmant
-:copyright: Copyright 2022, Thomas Calmant
+:copyright: Copyright 2024, Thomas Calmant
 :license: Apache License 2.0
-:version: 0.4.3.2
+:version: 0.4.3.3
 
 ..
 
-    Copyright 2022 Thomas Calmant
+    Copyright 2024 Thomas Calmant
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ Installation script
 """
 
 # Module version
-__version_info__ = (0, 4, 3, 2)
+__version_info__ = (0, 4, 3, 3)
 __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
@@ -72,5 +72,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
     ],
 )
