@@ -20,13 +20,13 @@
 # -- Project information -----------------------------------------------------
 
 project = "jsonrpclib-pelix"
-copyright = "2020, Thomas Calmant"
+copyright = "2024, Thomas Calmant"
 author = "Thomas Calmant"
 
 # The short X.Y version
 version = "0.4"
 # The full version, including alpha/beta/rc tags
-release = "0.4.2"
+release = "0.4.3.3"
 
 
 # -- General configuration ---------------------------------------------------
@@ -64,7 +64,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".gitignore", "requirements.txt"]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
