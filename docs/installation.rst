@@ -6,12 +6,12 @@ Installation
 Requirements
 ************
 
-It supports ``cjson`` and ``simplejson``, and looks for the parsers in that
-order (searching first for ``cjson``, then for the *built-in* ``json`` in 2.7+,
-and then the ``simplejson`` external library).
+It supports ``orjson``, ``cjson`` and ``simplejson``, and looks for the parsers
+in that order (searching first for `orjson`, `ujson`, `cjson`, `simplejson` and
+finally for the *built-in* `json`).
 One of these must be installed to use this library, although if you have a
 standard distribution of 2.7+, you should already have one.
-Keep in mind that ``cjson`` is supposed to be the quickest, I believe, so if
+Keep in mind that ``orjson`` is supposed to be the quickest, I believe, so if
 you are going for full-on optimization you may want to pick it up.
 
 

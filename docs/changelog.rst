@@ -3,6 +3,17 @@
 Release Notes
 #############
 
+0.4.3.4
+=======
+
+:Release Date: 2025-03-03
+
+* Add `orjson` support (see
+  `#62 <https://github.com/tcalmant/jsonrpclib/pull/62>`_).
+  Thanks `@fhaeuser <https://github.com/fhaeuser>`_ for this.
+* Updated GitHub CI configuration to support testing from Python 3.6 to 3.14.
+
+
 0.4.3.3
 =======
 
