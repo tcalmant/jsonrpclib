@@ -20,13 +20,13 @@
 # -- Project information -----------------------------------------------------
 
 project = "jsonrpclib-pelix"
-copyright = "2024, Thomas Calmant"
+copyright = "2025, Thomas Calmant"
 author = "Thomas Calmant"
 
 # The short X.Y version
 version = "0.4"
 # The full version, including alpha/beta/rc tags
-release = "0.4.3.3"
+release = "0.4.3.4"
 
 
 # -- General configuration ---------------------------------------------------
