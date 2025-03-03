@@ -103,12 +103,31 @@ class UJsonHandler(JsonHandler):
         return ujson.loads, dumps_ujson
 
 
+class OrJsonHandler(JsonHandler):
+    """
+    Handler based on orjson
+    """
+
+    def get_methods(self):
+        import orjson
+
+        def dumps_orjson(obj, encoding="utf-8"):
+            return orjson.dumps(obj).decode(encoding)
+
+        return orjson.loads, dumps_orjson
+
+
 def get_handler():
     # type: () -> JsonHandler
     """
     Returns the best available Json parser
     """
-    for handler_class in (UJsonHandler, SimpleJsonHandler, CJsonHandler):
+    for handler_class in (
+        OrJsonHandler,
+        UJsonHandler,
+        SimpleJsonHandler,
+        CJsonHandler,
+    ):
         handler = handler_class()
         try:
             loader, dumper = handler.get_methods()
