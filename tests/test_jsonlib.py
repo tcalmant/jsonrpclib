@@ -109,6 +109,13 @@ class TestJsonLibLoading(unittest.TestCase):
         except ImportError:
             pass
 
+        try:
+            import orjson  # pylint: disable=unused-import,import-outside-toplevel
+
+            available.add("orjson")
+        except ImportError:
+            pass
+
         # Check the availability of the expected best handler
         expected_best = self._get_expected_best(available)
 
@@ -271,3 +278,47 @@ class TestJsonLibLoading(unittest.TestCase):
         finally:
             # Reload the module
             imp_reload(simplejson)
+
+    def test_orjson(self):
+        """
+        Tests if the orjson methods are really used
+        """
+        try:
+            import orjson  # pylint: disable=import-outside-toplevel
+        except ImportError:
+            return self.skipTest("orjson is missing: ignore")
+
+        # Check if the expected best is right
+        self._check_expected_best("orjson")
+
+        try:
+            # Force methods to raise an exception
+            orjson.loads = _fake_loads
+
+            orjson.dumps = lambda *args, **kwargs: _fake_dumps(
+                *args, **kwargs
+            ).encode()  # orjson.dumps returns bytes
+
+            # Reload the module
+            imp_reload(jsonlib)
+
+            # Check the handler
+            handler = jsonlib.get_handler()
+            self.assertIsInstance(handler, jsonlib.OrJsonHandler)
+
+            # Check the methods
+            load_method, dump_method = jsonlib.get_handler_methods()
+            self.assertIs(orjson.loads, _fake_loads)
+            self.assertIs(load_method, _fake_loads)
+            self.assertRaises(
+                NotImplementedError, load_method, TEST_INPUT_MARKER
+            )
+            self.assertRaises(
+                NotImplementedError, dump_method, TEST_OUTPUT_MARKER
+            )
+            self.assertRaises(
+                NotImplementedError, dump_method, TEST_OUTPUT_MARKER, "encoding"
+            )
+        finally:
+            # Reload the module
+            imp_reload(orjson)

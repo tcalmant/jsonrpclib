@@ -11,6 +11,13 @@ echo "Initial tests..."
 export JSONRPCLIB_TEST_EXPECTED_LIB=json
 coverage run -m pytest || exit 1
 
+echo "orJson tests..."
+pip install orjson && (
+    export JSONRPCLIB_TEST_EXPECTED_LIB=orjson
+    coverage run -m pytest tests/test_jsonlib.py || exit 1
+    pip uninstall -y orjson
+)
+
 echo "uJson tests..."
 pip install ujson && (
     export JSONRPCLIB_TEST_EXPECTED_LIB=ujson
