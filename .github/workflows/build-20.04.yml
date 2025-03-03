@@ -5,10 +5,10 @@ name: CI Build
 
 on:
   push:
-    branches: '**'
+    branches: [ "master" ]
     tags: '**'
   pull_request:
-    branches: '**'
+    branches: [ "master" ]
 
 jobs:
   build:
