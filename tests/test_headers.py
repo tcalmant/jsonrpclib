@@ -85,7 +85,9 @@ class HeadersTests(unittest.TestCase):
 
         # Extract headers
         raw_headers = request_line.splitlines()[1:-1]
-        raw_headers = map(lambda h: re.split(r":\s?", h, 1), raw_headers)
+        raw_headers = map(
+            lambda h: re.split(r":\s?", h, maxsplit=1), raw_headers
+        )
         for header, value in raw_headers:
             header = header.lower()
             if check_duplicates and header in headers:
