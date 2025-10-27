@@ -45,7 +45,6 @@ try:
     # variant of this package.
     SimpleXMLRPCDispatcher = xmlrpcserver.SimpleXMLRPCDispatcher
     SimpleXMLRPCRequestHandler = xmlrpcserver.SimpleXMLRPCRequestHandler
-    CGIXMLRPCRequestHandler = xmlrpcserver.CGIXMLRPCRequestHandler
     resolve_dotted_attribute = xmlrpcserver.resolve_dotted_attribute  # type: ignore  # noqa: E501  # pylint: disable=invalid-name,line-too-long
     import socketserver
 except (ImportError, AttributeError):
@@ -55,7 +54,6 @@ except (ImportError, AttributeError):
 
     SimpleXMLRPCDispatcher = xmlrpcserver.SimpleXMLRPCDispatcher  # type: ignore  # noqa: E501  # pylint: disable=invalid-name,line-too-long
     SimpleXMLRPCRequestHandler = xmlrpcserver.SimpleXMLRPCRequestHandler  # type: ignore  # noqa: E501  # pylint: disable=invalid-name,line-too-long
-    CGIXMLRPCRequestHandler = xmlrpcserver.CGIXMLRPCRequestHandler  # type: ignore  # noqa: E501  # pylint: disable=invalid-name,line-too-long
     resolve_dotted_attribute = xmlrpcserver.resolve_dotted_attribute  # type: ignore  # noqa: E501  # pylint: disable=invalid-name,line-too-long
     import SocketServer as socketserver  # type: ignore
 
@@ -688,41 +686,43 @@ class PooledJSONRPCServer(socketserver.ThreadingMixIn, SimpleJSONRPCServer):
 
 # ------------------------------------------------------------------------------
 
+if sys.version_info < (3, 15):
+    CGIXMLRPCRequestHandler = xmlrpcserver.CGIXMLRPCRequestHandler
 
-class CGIJSONRPCRequestHandler(
-    SimpleJSONRPCDispatcher, CGIXMLRPCRequestHandler
-):
-    """
-    JSON-RPC CGI handler (and dispatcher)
-    """
-
-    def __init__(self, encoding="UTF-8", config=jsonrpclib.config.DEFAULT):
+    class CGIJSONRPCRequestHandler(
+        SimpleJSONRPCDispatcher, CGIXMLRPCRequestHandler
+    ):
         """
-        Sets up the dispatcher
-
-        :param encoding: Dispatcher encoding
-        :param config: A JSONRPClib Config instance
+        JSON-RPC CGI handler (and dispatcher)
         """
-        SimpleJSONRPCDispatcher.__init__(self, encoding, config)
-        CGIXMLRPCRequestHandler.__init__(self, encoding=encoding)
 
-    def handle_jsonrpc(self, request_text):
-        """
-        Handle a JSON-RPC request
-        """
-        try:
-            writer = sys.stdout.buffer
-        except AttributeError:
-            writer = sys.stdout
+        def __init__(self, encoding="UTF-8", config=jsonrpclib.config.DEFAULT):
+            """
+            Sets up the dispatcher
 
-        response = self._marshaled_dispatch(request_text)
-        response = response.encode(self.encoding)
-        print("Content-Type:", self.json_config.content_type)
-        print("Content-Length:", len(response))
-        print()
-        sys.stdout.flush()
-        writer.write(response)
-        writer.flush()
+            :param encoding: Dispatcher encoding
+            :param config: A JSONRPClib Config instance
+            """
+            SimpleJSONRPCDispatcher.__init__(self, encoding, config)
+            CGIXMLRPCRequestHandler.__init__(self, encoding=encoding)
 
-    # XML-RPC alias
-    handle_xmlrpc = handle_jsonrpc
+        def handle_jsonrpc(self, request_text):
+            """
+            Handle a JSON-RPC request
+            """
+            try:
+                writer = sys.stdout.buffer
+            except AttributeError:
+                writer = sys.stdout
+
+            response = self._marshaled_dispatch(request_text)
+            response = response.encode(self.encoding)
+            print("Content-Type:", self.json_config.content_type)
+            print("Content-Length:", len(response))
+            print()
+            sys.stdout.flush()
+            writer.write(response)
+            writer.flush()
+
+        # XML-RPC alias
+        handle_xmlrpc = handle_jsonrpc
