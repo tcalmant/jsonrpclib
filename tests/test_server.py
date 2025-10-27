@@ -8,6 +8,7 @@ Tests the pooled server
 
 # Standard library
 import random
+import socket
 import threading
 import time
 import unittest
@@ -43,8 +44,10 @@ class PooledServerTests(unittest.TestCase):
         :param pool: Thread pool to use
         :param max_time: Max time the sleep test should take
         """
+        host_address = socket.gethostbyname("localhost")
+
         # Setup server
-        server = PooledJSONRPCServer(("localhost", 0), thread_pool=pool)
+        server = PooledJSONRPCServer((host_address, 0), thread_pool=pool)
         server.register_function(add)
         server.register_function(sleep)
 
@@ -58,7 +61,7 @@ class PooledServerTests(unittest.TestCase):
             port = server.socket.getsockname()[1]
 
             # Make the client
-            target_url = "http://localhost:{0}".format(port)
+            target_url = "http://{0}:{1}".format(host_address, port)
             client = ServerProxy(target_url)
 
             # Check calls
