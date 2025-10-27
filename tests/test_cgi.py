@@ -12,7 +12,12 @@ from __future__ import print_function
 import os
 import random
 import threading
+import sys
 import unittest
+
+
+if sys.version_info >= (3, 15):
+    raise unittest.SkipTest("CGI support has been removed in Python 3.15")
 
 try:
     from http.server import HTTPServer, CGIHTTPRequestHandler

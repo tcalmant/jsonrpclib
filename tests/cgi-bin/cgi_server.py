@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Sample CGI server
+Sample CGI server. Won't work with Python 3.15 and later
 """
 
 import os
