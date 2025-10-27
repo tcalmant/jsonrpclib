@@ -9,6 +9,7 @@ Tests to verify the additional headers feature
 # Standard library
 import contextlib
 import re
+import socket
 import sys
 import unittest
 import jsonrpclib
@@ -28,6 +29,8 @@ from jsonrpclib.utils import from_bytes
 from tests.utilities import UtilityServer
 
 # ------------------------------------------------------------------------------
+
+HOST = socket.gethostbyname("localhost")
 
 
 class HeadersTests(unittest.TestCase):
@@ -95,10 +98,10 @@ class HeadersTests(unittest.TestCase):
             headers[header] = value
 
     def test_should_extract_headers(self):
-        """ Check client headers capture """
+        """Check client headers capture"""
         # given
         client = jsonrpclib.ServerProxy(
-            "http://localhost:{0}".format(self.port), verbose=1
+            "http://{0}:{1}".format(HOST, self.port), verbose=1
         )
 
         # when
@@ -112,10 +115,10 @@ class HeadersTests(unittest.TestCase):
         self.assertEqual(headers["content-type"], "application/json-rpc")
 
     def test_should_add_additional_headers(self):
-        """ Check sending of custom headers """
+        """Check sending of custom headers"""
         # given
         client = jsonrpclib.ServerProxy(
-            "http://localhost:{0}".format(self.port),
+            "http://{0}:{1}".format(HOST, self.port),
             verbose=1,
             headers={"X-My-Header": "Test"},
         )
@@ -130,10 +133,10 @@ class HeadersTests(unittest.TestCase):
         self.assertEqual(headers["x-my-header"], "Test")
 
     def test_should_add_additional_headers_to_notifications(self):
-        """ Check custom headers on notifications """
+        """Check custom headers on notifications"""
         # given
         client = jsonrpclib.ServerProxy(
-            "http://localhost:{0}".format(self.port),
+            "http://{0}:{1}".format(HOST, self.port),
             verbose=1,
             headers={"X-My-Header": "Test"},
         )
@@ -147,10 +150,10 @@ class HeadersTests(unittest.TestCase):
         self.assertEqual(headers["x-my-header"], "Test")
 
     def test_should_override_headers(self):
-        """ Custom headers must override default ones """
+        """Custom headers must override default ones"""
         # given
         client = jsonrpclib.ServerProxy(
-            "http://localhost:{0}".format(self.port),
+            "http://{0}:{1}".format(HOST, self.port),
             verbose=1,
             headers={"User-Agent": "jsonrpclib test", "Host": "example.com"},
         )
@@ -165,10 +168,10 @@ class HeadersTests(unittest.TestCase):
         self.assertEqual(headers["host"], "example.com")
 
     def test_should_not_override_content_length(self):
-        """ Custom headers can't override Content-Length """
+        """Custom headers can't override Content-Length"""
         # given
         client = jsonrpclib.ServerProxy(
-            "http://localhost:{0}".format(self.port),
+            "http://{0}:{1}".format(HOST, self.port),
             verbose=1,
             headers={"Content-Length": "invalid value"},
         )
@@ -183,10 +186,10 @@ class HeadersTests(unittest.TestCase):
         self.assertNotEqual(headers["content-length"], "invalid value")
 
     def test_should_convert_header_values_to_basestring(self):
-        """ Custom headers values should be converted to str """
+        """Custom headers values should be converted to str"""
         # given
         client = jsonrpclib.ServerProxy(
-            "http://localhost:{0}".format(self.port),
+            "http://{0}:{1}".format(HOST, self.port),
             verbose=1,
             headers={"X-Test": 123},
         )
@@ -201,10 +204,10 @@ class HeadersTests(unittest.TestCase):
         self.assertEqual(headers["x-test"], "123")
 
     def test_should_add_custom_headers_to_methods(self):
-        """ Check method-based custom headers """
+        """Check method-based custom headers"""
         # given
         client = jsonrpclib.ServerProxy(
-            "http://localhost:{0}".format(self.port), verbose=1
+            "http://{0}:{1}".format(HOST, self.port), verbose=1
         )
 
         # when
@@ -219,10 +222,10 @@ class HeadersTests(unittest.TestCase):
         self.assertEqual(headers["x-method"], "Method")
 
     def test_should_override_global_headers(self):
-        """ Method-based custom headers override context ones """
+        """Method-based custom headers override context ones"""
         # given
         client = jsonrpclib.ServerProxy(
-            "http://localhost:{0}".format(self.port),
+            "http://{0}:{1}".format(HOST, self.port),
             verbose=1,
             headers={"X-Test": "Global"},
         )
@@ -238,10 +241,10 @@ class HeadersTests(unittest.TestCase):
         self.assertEqual(headers["x-test"], "Method")
 
     def test_should_restore_global_headers(self):
-        """ Check custom headers context clean up """
+        """Check custom headers context clean up"""
         # given
         client = jsonrpclib.ServerProxy(
-            "http://localhost:{0}".format(self.port),
+            "http://{0}:{1}".format(HOST, self.port),
             verbose=1,
             headers={"X-Test": "Global"},
         )
@@ -264,10 +267,10 @@ class HeadersTests(unittest.TestCase):
         self.assertEqual(headers["x-test"], "Global")
 
     def test_should_allow_to_nest_additional_header_blocks(self):
-        """ Check nested additional headers """
+        """Check nested additional headers"""
         # given
         client = jsonrpclib.ServerProxy(
-            "http://localhost:{0}".format(self.port), verbose=1
+            "http://{0}:{1}".format(HOST, self.port), verbose=1
         )
 
         # when
