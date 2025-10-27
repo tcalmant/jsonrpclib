@@ -11,8 +11,14 @@ from __future__ import print_function
 # Standard library
 import os
 import random
+import socket
 import threading
+import sys
 import unittest
+
+
+if sys.version_info >= (3, 15):
+    raise unittest.SkipTest("CGI support has been removed in Python 3.15")
 
 try:
     from http.server import HTTPServer, CGIHTTPRequestHandler
@@ -24,6 +30,8 @@ except ImportError:
 from jsonrpclib import ServerProxy
 
 # ------------------------------------------------------------------------------
+
+HOST = socket.gethostbyname("localhost")
 
 
 class CGIHandlerTests(unittest.TestCase):
@@ -40,7 +48,7 @@ class CGIHandlerTests(unittest.TestCase):
         try:
             # Setup server
             os.chdir(os.path.dirname(__file__))
-            server = HTTPServer(("localhost", 0), CGIHTTPRequestHandler)
+            server = HTTPServer((HOST, 0), CGIHTTPRequestHandler)
 
             # Serve in a thread
             thread = threading.Thread(target=server.serve_forever)
@@ -52,7 +60,7 @@ class CGIHandlerTests(unittest.TestCase):
 
             # Make the client
             client = ServerProxy(
-                "http://localhost:{0}/cgi-bin/cgi_server.py".format(port)
+                "http://{0}:{1}/cgi-bin/cgi_server.py".format(HOST, port)
             )
 
             # Check call
