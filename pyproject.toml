@@ -39,10 +39,10 @@ license = "Apache-2.0"
 license-files = ["LICENSE"]
 
 [project.urls]
-Homepage = "http://github.com/tcalmant/jsonrpclib/"
-Issues = "http://github.com/tcalmant/jsonrpclib/issues"
+Homepage = "https://github.com/tcalmant/jsonrpclib/"
+Issues = "https://github.com/tcalmant/jsonrpclib/issues"
 Documentation = "https://jsonrpclib-pelix.readthedocs.io/"
-Source = "http://github.com/tcalmant/jsonrpclib/"
+Source = "https://github.com/tcalmant/jsonrpclib/"
 
 [tool.black]
 line-length = 80

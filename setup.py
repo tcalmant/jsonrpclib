@@ -16,7 +16,7 @@ Installation script
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
 
-        http://www.apache.org/licenses/LICENSE-2.0
+        https://www.apache.org/licenses/LICENSE-2.0
 
     Unless required by applicable law or agreed to in writing, software
     distributed under the License is distributed on an "AS IS" BASIS,
@@ -51,7 +51,7 @@ setup(
     license="Apache License 2.0",
     author="Thomas Calmant",
     author_email="thomas.calmant+github@gmail.com",
-    url="http://github.com/tcalmant/jsonrpclib/",
+    url="https://github.com/tcalmant/jsonrpclib/",
     description="This project is an implementation of the JSON-RPC v2.0 "
     "specification (backwards-compatible) as a client library, for Python 2.7 "
     "and Python 3. This version is a fork of jsonrpclib by Josh Marshall, "
