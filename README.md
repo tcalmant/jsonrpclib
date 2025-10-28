@@ -11,7 +11,7 @@ It supports both the original 1.0 specification, as well as the new
 arguments, etc.
 
 This library is licensed under the terms of the
-[Apache Software License 2.0](<http://www.apache.org/licenses/LICENSE-2.0.html>).
+[Apache Software License 2.0](<https://www.apache.org/licenses/LICENSE-2.0.html>).
 
 
 ## About this version
