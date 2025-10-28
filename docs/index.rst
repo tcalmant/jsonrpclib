@@ -18,7 +18,7 @@ A ``SimpleJSONRPCServer`` class has been added. It is intended to emulate the
 ``SimpleXMLRPCServer`` from the default Python distribution.
 
 This library is licensed under the terms of the
-`Apache Software License 2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>`_.
+`Apache Software License 2.0 <https://www.apache.org/licenses/LICENSE-2.0.html>`_.
 
 .. toctree::
    :maxdepth: 2

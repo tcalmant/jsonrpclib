@@ -35,7 +35,7 @@ Alternatively, you can install the latest development version:
    pip install git+https://github.com/tcalmant/jsonrpclib.git
 
 Finally, you can download the source from the GitHub repository
-at http://github.com/tcalmant/jsonrpclib and manually install it
+at https://github.com/tcalmant/jsonrpclib and manually install it
 with the following commands:
 
 .. code-block:: console
