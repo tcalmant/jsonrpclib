@@ -11,11 +11,12 @@ __pycache__
 # VS Code
 .vscode
 .cache
-.mypy_cache
+.*_cache
 
 # Tox
 .tox/
 .coverage
+.coverage.*
 htmlcov/
 
 # Nosetests
@@ -23,6 +24,7 @@ htmlcov/
 nosetests.xml
 
 # Development environment
+.venv/
 venv*/
 
 # When installed in develop mode
@@ -32,3 +34,6 @@ venv*/
 build/*
 dist/*
 *.egg-info/
+
+# uv lock file
+uv.lock
