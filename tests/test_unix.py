@@ -65,7 +65,7 @@ class UnixSocketTests(unittest.TestCase):
             # Clean up
             try:
                 os.remove(socket_name)
-            except:
+            except IOError:
                 pass
 
     def test_host_only(self):
@@ -105,5 +105,5 @@ class UnixSocketTests(unittest.TestCase):
             # Clean up
             try:
                 os.remove(socket_name)
-            except:
+            except IOError:
                 pass

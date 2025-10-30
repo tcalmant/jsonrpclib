@@ -44,5 +44,14 @@ Issues = "https://github.com/tcalmant/jsonrpclib/issues"
 Documentation = "https://jsonrpclib-pelix.readthedocs.io/"
 Source = "https://github.com/tcalmant/jsonrpclib/"
 
+[dependency-groups]
+dev = [
+    "coverage>=6.2",
+    "pytest>=7.0.1",
+]
+
 [tool.black]
+line-length = 80
+
+[tool.ruff]
 line-length = 80

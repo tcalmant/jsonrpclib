@@ -74,7 +74,7 @@ class HeadersTests(unittest.TestCase):
         # Extract the sent request content
         request_lines = f.getvalue().splitlines()
         request_lines = list(
-            filter(lambda l: l.startswith("send:"), request_lines)
+            filter(lambda line: line.startswith("send:"), request_lines)
         )
         request_line = request_lines[0].split("send: ")[-1]
 
@@ -82,7 +82,7 @@ class HeadersTests(unittest.TestCase):
         try:
             # Use eval to convert the representation into a string
             request_line = from_bytes(eval(request_line))
-        except:
+        except Exception:
             # Keep the received version
             pass
 

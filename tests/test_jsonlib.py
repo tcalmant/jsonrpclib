@@ -89,30 +89,30 @@ class TestJsonLibLoading(unittest.TestCase):
         available = {"json"}
 
         try:
-            import cjson  # pylint: disable=unused-import,import-outside-toplevel
+            import cjson
 
-            available.add("cjson")
+            available.add(cjson.__name__)
         except ImportError:
             pass
 
         try:
-            import ujson  # pylint: disable=unused-import,import-outside-toplevel
+            import ujson
 
-            available.add("ujson")
+            available.add(ujson.__name__)
         except ImportError:
             pass
 
         try:
-            import simplejson  # pylint: disable=unused-import,import-outside-toplevel
+            import simplejson
 
-            available.add("simplejson")
+            available.add(simplejson.__name__)
         except ImportError:
             pass
 
         try:
-            import orjson  # pylint: disable=unused-import,import-outside-toplevel
+            import orjson
 
-            available.add("orjson")
+            available.add(orjson.__name__)
         except ImportError:
             pass
 

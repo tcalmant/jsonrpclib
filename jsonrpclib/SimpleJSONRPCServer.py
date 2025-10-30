@@ -425,7 +425,7 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
                 )
                 _logger.warning("Invalid call parameters: %s", fault)
                 return fault
-            except:
+            except BaseException:
                 # Method exception
                 err_lines = traceback.format_exception(*sys.exc_info())
                 trace_string = "{0} | {1}".format(
@@ -502,7 +502,7 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
 
             # No exception: send a 200 OK
             self.send_response(200)
-        except:
+        except BaseException:
             # Exception: send 500 Server Error
             self.send_response(500)
             err_lines = traceback.format_exception(*sys.exc_info())
