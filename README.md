@@ -20,8 +20,9 @@ This is a patched version of the original `jsonrpclib` project by Josh Marshall,
 available at
 [joshmarshall/jsonrpclib](<https://github.com/joshmarshall/jsonrpclib>).
 
-The suffix *-pelix* only indicates that this version works with Pelix
-Remote Services, but it is **not** a Pelix specific implementation.
+The suffix *-pelix* only indicates that this version works with
+[Pelix Remote Services](https://ipopo.readthedocs.io/en/latest/refcards/remote_services.html),
+but it is **not** a Pelix specific implementation.
 
 * This version adds support for Python 3, staying compatible with Python 2.7.
   The support for Python 2.6 has been dropped, as it was becoming to hard to
