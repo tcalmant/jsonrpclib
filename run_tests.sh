@@ -58,13 +58,45 @@ run_lib_tests() {
     return $rc
 }
 
+python_supports_pydantic() {
+    if [ -z "$UV" ]
+    then
+        # uv requires Python 3.8+, supported by Pydantic
+        return 1
+    fi
+
+    python -c 'import sys; exit(sys.version_info[:2] >= (3, 7)' >/dev/null 2>&1
+    if [ $? -eq 0 ]
+    then
+        return 1
+    fi
+
+    python3 -c 'import sys; exit(sys.version_info[:2] >= (3, 7)' >/dev/null 2>&1
+    if [ $? -eq 0 ]
+    then
+        return 1
+    else
+        return 0
+    fi
+}
+
 echo "Installing dependencies..."
 run_pip_install pytest coverage || exit 1
 export COVERAGE_PROCESS_START=".coveragerc"
 
+if python_supports_pydantic
+then
+    echo "Try installing pydantic..."
+    run_pip_install pydantic
+    EXTRA_ARGS=()
+else
+    echo "Ignoring Pydantic tests"
+    EXTRA_ARGS=("--ignore" "tests/test_pydantic.py")
+fi
+
 echo "Initial tests..."
 export JSONRPCLIB_TEST_EXPECTED_LIB=json
-run_coverage run -m pytest || exit 1
+run_coverage run -m pytest "${EXTRA_ARGS[@]}" || exit 1
 
 echo "orJson tests..."
 run_lib_tests orjson orjson || exit 1

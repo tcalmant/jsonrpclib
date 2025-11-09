@@ -182,6 +182,14 @@ def dump(
     elif utils.is_enum(obj):
         # Add parameters for enumerations
         return_obj["__jsonclass__"].append([obj.value])
+    elif utils.is_pydantic(obj):
+        # Found a Pydantic class, drop to JSON
+        if hasattr(obj, "model_dump"):
+            # v2 Pydantic
+            return_obj["__jsonclass__"].append(obj.model_dump())
+        else:
+            # v1 Pydantic
+            return_obj["__jsonclass__"].append(obj.dict())
     else:
         # Otherwise, try to figure it out
         # Obviously, we can't assume to know anything about the
