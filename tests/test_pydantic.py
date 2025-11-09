@@ -25,6 +25,7 @@ from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 
 # ------------------------------------------------------------------------------
 
+
 class Argument(BaseModel):
     name: str
     value: int
@@ -46,7 +47,7 @@ def handler(arg):
         response="{} answered {}".format(arg.name, arg.value),
         value=arg.value,
         universal_answer=arg.value == 42,
-        argument=arg
+        argument=arg,
     )
 
 
@@ -61,7 +62,7 @@ class PydanticTests(unittest.TestCase):
     """
 
     def test_all_pydantic(self):
-        """ Test with valid data """
+        """Test with valid data"""
         # Prepare the server
         srv = SimpleJSONRPCServer((HOST, 0))
         srv.register_function(handler, "test")
@@ -99,7 +100,7 @@ class PydanticTests(unittest.TestCase):
         """
         Test Pydantic when the client uses an invalid value
         """
-# Prepare the server
+        # Prepare the server
         srv = SimpleJSONRPCServer((HOST, 0))
         srv.register_function(handler, "test")
 
