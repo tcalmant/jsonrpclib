@@ -7,7 +7,7 @@ packages = ["jsonrpclib"]
 
 [project]
 name = "jsonrpclib-pelix"
-version = "0.4.3.4"
+version = "1.0.0"
 authors = [
   { name="Thomas Calmant", email="thomas.calmant+github@gmail.com" },
   { name="Josh Marshall" }

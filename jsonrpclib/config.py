@@ -5,7 +5,7 @@ The configuration module.
 
 :copyright: Copyright 2025, Thomas Calmant
 :license: Apache License 2.0
-:version: 0.4.3.4
+:version: 1.0.0
 
 ..
 
@@ -29,7 +29,7 @@ import sys
 # ------------------------------------------------------------------------------
 
 # Module version
-__version_info__ = (0, 4, 3, 4)
+__version_info__ = (1, 0, 0)
 __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
