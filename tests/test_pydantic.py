@@ -34,6 +34,7 @@ class Result(BaseModel):
     response: str
     universal_answer: bool = False
     value: int = Field(description="Query", gt=0, lt=50)
+    argument: Argument
 
 
 def handler(arg):
@@ -45,6 +46,7 @@ def handler(arg):
         response="{} answered {}".format(arg.name, arg.value),
         value=arg.value,
         universal_answer=arg.value == 42,
+        argument=arg
     )
 
 
@@ -87,6 +89,7 @@ class PydanticTests(unittest.TestCase):
             self.assertIsInstance(result, Result)
             self.assertEqual(arg.value, result.value)
             self.assertFalse(result.universal_answer)
+            self.assertEqual(arg, result.argument)
         finally:
             srv.shutdown()
             srv.server_close()
