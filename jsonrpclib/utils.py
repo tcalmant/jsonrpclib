@@ -68,6 +68,12 @@ if sys.version_info[0] < 3:
             return data
         return str(data)
 
+    def is_pydantic(obj):
+        """
+        Checks if the given objet is Pydantic model instance
+        """
+        return False
+
 
 else:
     # Python 3
@@ -92,6 +98,15 @@ else:
             return data
         return str(data, "UTF-8")
 
+    def is_pydantic(obj):
+        """
+        Checks if the given objet is Pydantic model instance
+        """
+        return any(
+            base.__name__ == "BaseModel"
+            and base.__module__.startswith("pydantic")
+            for base in obj.__class__.__mro__
+        )
 
 # ------------------------------------------------------------------------------
 # Enumerations
