@@ -3,6 +3,22 @@
 Release Notes
 #############
 
+1.0
+===
+
+:Release Date: 2025-11-09
+
+* Disable CGI on Python 3.15 (see
+  `#64 <https://github.com/tcalmant/jsonrpclib/issues/64>`_).
+  Python 3.15 will drop support for CGI, removing the parent classes
+  we relied onto.
+  Thanks `@mtelka <https://github.com/mtelka>` for spotting this.
+* GitHub CI configuration now runs tests from Python 3.8 to 3.15 (alpha).
+  The code is manually tested on Python 2.7 and 3.6 Docker containers before releases.
+* Bumping version to 1.0 as we didn't have big issues for a while and we can consider
+  the project stable.
+
+
 0.4.3.4
 =======
 
