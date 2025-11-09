@@ -286,8 +286,12 @@ class TransportMixIn(object):
         :raise AssertionError: The given dictionary is not on the latest stored
                                in the additional headers list
         """
-        assert self.additional_headers[-1] == headers
-        self.additional_headers.pop()
+        if self.additional_headers[-1] == headers:
+            self.additional_headers.pop()
+        else:
+            raise AssertionError(
+                "Headers to remove are not the top of the stack"
+            )
 
     def emit_additional_headers(self, connection):
         """
