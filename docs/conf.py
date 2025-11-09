@@ -24,9 +24,9 @@ copyright = "2025, Thomas Calmant"
 author = "Thomas Calmant"
 
 # The short X.Y version
-version = "0.4"
+version = "1.0"
 # The full version, including alpha/beta/rc tags
-release = "0.4.3.4"
+release = "1.0.0"
 
 
 # -- General configuration ---------------------------------------------------
@@ -49,7 +49,7 @@ templates_path = ["_templates"]
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = ".rst"
+source_suffix = ".md"
 
 # The master toctree document.
 master_doc = "index"
@@ -59,7 +59,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -102,7 +102,7 @@ html_static_path = ["_static"]
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "jsonrpclib-pelixdoc"
+htmlhelp_basename = "jsonrpclib-pelix-doc"
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -188,3 +188,21 @@ epub_exclude_files = ["search.html"]
 
 
 # -- Extension configuration -------------------------------------------------
+
+extensions = ["myst_parser"]
+
+myst_enable_extensions = [
+    "amsmath",
+    "attrs_inline",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    "fieldlist",
+    "html_admonition",
+    "html_image",
+    "replacements",
+    "smartquotes",
+    "strikethrough",
+    "substitution",
+    "tasklist",
+]
