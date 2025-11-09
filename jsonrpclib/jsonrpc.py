@@ -236,7 +236,9 @@ class JSONTarget(object):
 
 
 class TransportMixIn(object):
-    """ Just extends the XML-RPC transport where necessary. """
+    """
+    Just extends the XML-RPC transport where necessary.
+    """
 
     # for Python 2.7 support
     _connection = None
@@ -305,7 +307,7 @@ class TransportMixIn(object):
             # Not available this version of Python (should not happen)
             pass
         else:
-            for (key, value) in extra_headers:
+            for key, value in extra_headers:
                 additional_headers[key] = value
 
         # Prepare the merged dictionary
@@ -1235,9 +1237,7 @@ def dump(
         If a method, and params are not in a listish or a Fault,
         error out.
         """
-        raise TypeError(
-            "Params must be a dict, list, tuple " "or Fault instance."
-        )
+        raise TypeError("Params must be a dict, list, tuple or Fault instance.")
 
     # Prepares the JSON-RPC content
     payload = Payload(rpcid=rpcid, version=version)
@@ -1250,8 +1250,7 @@ def dump(
     if not isinstance(methodname, utils.STRING_TYPES) and not is_response:
         # Neither a request nor a response
         raise ValueError(
-            "Method name must be a string, or is_response "
-            "must be set to True."
+            "Method name must be a string, or is_response must be set to True."
         )
 
     if config.use_jsonclass:

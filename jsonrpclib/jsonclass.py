@@ -307,8 +307,9 @@ def load(obj, classes=None):
             )
     else:
         raise TranslationError(
-            "Constructor args must be a dict or a list, "
-            "not {0}".format(type(params).__name__)
+            "Constructor args must be a dict or a list, not {0}".format(
+                type(params).__name__
+            )
         )
 
     # Remove the class information, as it must be ignored during the

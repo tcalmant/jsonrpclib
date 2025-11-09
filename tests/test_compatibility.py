@@ -59,7 +59,7 @@ class TestCompatibility(unittest.TestCase):
 
     # Version 2.0 Tests
     def test_positional(self):
-        """ Positional arguments in a single call """
+        """Positional arguments in a single call"""
         result = self.client.subtract(23, 42)
         self.assertTrue(result == -19)
         result = self.client.subtract(42, 23)
@@ -77,7 +77,7 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_named(self):
-        """ Named arguments in a single call """
+        """Named arguments in a single call"""
         result = self.client.subtract(subtrahend=23, minuend=42)
         self.assertTrue(result == 19)
         result = self.client.subtract(minuend=42, subtrahend=23)
@@ -95,7 +95,7 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_notification(self):
-        """ Testing a notification (response should be null) """
+        """Testing a notification (response should be null)"""
         result = self.client._notify.update(1, 2, 3, 4, 5)
         self.assertTrue(result is None)
         request = json.loads(self.history.request)
@@ -110,7 +110,7 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_non_existent_method(self):
-        """ Testing behaviour when calling a non-existent method """
+        """Testing behaviour when calling a non-existent method"""
         self.assertRaises(jsonrpclib.ProtocolError, self.client.foobar)
         request = json.loads(self.history.request)
         response = json.loads(self.history.response)
@@ -128,14 +128,14 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_special_method(self):
-        """ Tests behaviour on dunder methods """
+        """Tests behaviour on dunder methods"""
         self.assertRaises(
             AttributeError, getattr, self.client, "__special_method__"
         )
         self.assertIsNone(self.history.request)
 
     def test_invalid_json(self):
-        """ Tests behaviour on invalid JSON request """
+        """Tests behaviour on invalid JSON request"""
         invalid_json = (
             '{"jsonrpc": "2.0", "method": "foobar, ' + '"params": "bar", "baz]'
         )
@@ -149,7 +149,7 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_invalid_request(self):
-        """ Tests incomplete request """
+        """Tests incomplete request"""
         invalid_request = '{"jsonrpc": "2.0", "method": 1, "params": "bar"}'
         self.client._run_request(invalid_request)
         response = json.loads(self.history.response)
@@ -161,7 +161,7 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_batch_invalid_json(self):
-        """ Tests invalid JSON request on batch call """
+        """Tests invalid JSON request on batch call"""
         invalid_request = (
             '[ {"jsonrpc": "2.0", "method": "sum", '
             + '"params": [1,2,4], "id": "1"},{"jsonrpc": "2.0", "method" ]'
@@ -176,7 +176,7 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_empty_array(self):
-        """ Tests empty array as request """
+        """Tests empty array as request"""
         invalid_request = "[]"
         self.client._run_request(invalid_request)
         response = json.loads(self.history.response)
@@ -188,7 +188,7 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(response == verify_response)
 
     def test_nonempty_array(self):
-        """ Tests array as request """
+        """Tests array as request"""
         invalid_request = "[1,2]"
         request_obj = json.loads(invalid_request)
         self.client._run_request(invalid_request)
@@ -203,7 +203,7 @@ class TestCompatibility(unittest.TestCase):
             self.assertTrue(resp == verify_resp)
 
     def test_batch(self):
-        """ Tests batch call """
+        """Tests batch call"""
         multicall = jsonrpclib.MultiCall(self.client)
         multicall.sum(1, 2, 4)
         multicall._notify.notify_hello(7)
@@ -272,7 +272,7 @@ class TestCompatibility(unittest.TestCase):
             self.assertTrue(response == verify_response)
 
     def test_batch_notifications(self):
-        """ Tests batch notifications """
+        """Tests batch notifications"""
         multicall = jsonrpclib.MultiCall(self.client)
         multicall._notify.notify_sum(1, 2, 4)
         multicall._notify.notify_hello(7)
@@ -290,7 +290,8 @@ class TestCompatibility(unittest.TestCase):
         self.assertTrue(self.history.response == "")
 
     def test_url_query_string(self):
-        """ Tests if the query string arguments are kept """
+        """Tests if the query string arguments are kept"""
+
         # Prepare a simple server
         class ReqHandler(BaseHTTPRequestHandler):
             """

@@ -22,14 +22,14 @@ from jsonrpclib.threadpool import ThreadPool
 
 
 def add(a, b):
-    """ Basic addition """
+    """Basic addition"""
     return a + b
 
 
 def sleep(t):
     start = time.time()
     while time.time() - start < t:
-        time.sleep(.1)
+        time.sleep(0.1)
 
 
 class PooledServerTests(unittest.TestCase):
@@ -71,8 +71,12 @@ class PooledServerTests(unittest.TestCase):
                 self.assertEqual(result, rand1 + rand2)
 
             # Check pauses (using different clients)
-            threads = [threading.Thread(target=ServerProxy(
-                target_url).sleep, args=(1,)) for _ in range(5)]
+            threads = [
+                threading.Thread(
+                    target=ServerProxy(target_url).sleep, args=(1,)
+                )
+                for _ in range(5)
+            ]
             start_time = time.time()
             for thread in threads:
                 thread.start()

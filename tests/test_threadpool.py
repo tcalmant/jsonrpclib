@@ -385,6 +385,7 @@ class ThreadPoolTest(unittest.TestCase):
         """
         Tests if an exception is correctly hidden
         """
+
         # Define the exception
         def thrower(ex):
             raise ex
