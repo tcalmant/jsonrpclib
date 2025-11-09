@@ -139,8 +139,8 @@ import ssl
 
 # Setup the SSL socket
 server = SimpleJSONRPCServer(('localhost', 8080), bind_and_activate=False)
-server.socket = ssl.wrap_socket(server.socket, certfile='server.pem',
-                                server_side=True)
+server.socket = ssl.wrap_socket(
+  server.socket, certfile='server.pem', server_side=True)
 server.server_bind()
 server.server_activate()
 
@@ -258,7 +258,7 @@ finally:
    os.remove(socket_name)
 ```
 
-This feature is tested on Linux during Travis-CI builds. It also has
+This feature is tested on Linux during GitHub CI builds. It also has
 been tested on Windows Subsystem for Linux (WSL) on Windows 10 1809.
 
 This feature is not available on "pure" Windows, as it doesn't provide
@@ -317,8 +317,8 @@ that in, although the best is just to give a specific configuration to
 2.0
 >>> config = jsonrpclib.config.Config(version=1.0)
 >>> history = jsonrpclib.history.History()
->>> server = jsonrpclib.ServerProxy('http://localhost:8080', config=config,
-                                    history=history)
+>>> server = jsonrpclib.ServerProxy(
+...   'http://localhost:8080', config=config, history=history)
 >>> server.add(7, 10)
 17
 >>> print(history.request)
@@ -363,8 +363,8 @@ using the `headers` keyword argument, when creating the `ServerProxy`:
 
 ```python
 >>> import jsonrpclib
->>> server = jsonrpclib.ServerProxy("http://localhost:8080",
-                                    headers={'X-Test' : 'Test'})
+>>> server = jsonrpclib.ServerProxy(
+...   "http://localhost:8080", headers={'X-Test' : 'Test'})
 ```
 
 You can also put additional request headers only for certain method
@@ -421,7 +421,7 @@ class TestSerial(object):
         return (self.args, {'foo':self.foo,})
 ```
 
-- Sample usage:
+* Sample usage:
 
 ```python
 >>> import jsonrpclib
@@ -439,12 +439,15 @@ class TestSerial(object):
 
 >>> print(history.request)
 {"id": "7805f1f9-9abd-49c6-81dc-dbd47229fe13", "jsonrpc": "2.0",
- "method": "ping", "params": [{"__jsonclass__":
-                               ["test_obj.TestSerial", []], "foo": "bar"}
-                             ]}
+ "method": "ping", "params": [
+    {"__jsonclass__": ["test_obj.TestSerial", []], "foo": "bar"}
+ ]}
 >>> print(history.response)
 {"id": "7805f1f9-9abd-49c6-81dc-dbd47229fe13", "jsonrpc": "2.0",
- "result": {"__jsonclass__": ["test_obj.TestSerial", []], "foo": "bar"}}
+ "result": {
+    "__jsonclass__": ["test_obj.TestSerial", []],
+    "foo": "bar"
+ }}
 ```
 
 This behavior is turned on by default.
@@ -460,13 +463,22 @@ Feedback on this "feature" is very, VERY much appreciated.
 
 ## Tests
 
-Tests are an almost-verbatim drop from the JSON-RPC specification 2.0
-page. They can be run using *unittest* or *nosetest*:
+Tests are an almost-verbatim drop from the JSON-RPC specification 2.0 page.
 
-```
+You can also run the test script, `./run_tests.sh` that will also try
+to install then remove the optional JSON parsing libraries (`orJson`, `uJson`, ...).
+This is the script executed by GitHub CI and in Docker containers before releases.
+
+The script can also be executed with `uv` to use a virtual environment to run tests:
+`uv run ./run_tests.sh`.
+
+You can also run tests for your setup using `unittest`, `nosetest` or `pytest`:
+
+```console
 python -m unittest discover tests
 python3 -m unittest discover tests
 nosetests tests
+pytest tests
 ```
 
 ## Why JSON-RPC?
