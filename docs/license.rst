@@ -1,7 +1,7 @@
 License
 =======
 
-iPOPO is licensed under the terms of the
+jsonrpclib-pelix is licensed under the terms of the
 `Apache Software License 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`_.
 All contributions must comply with this license.
 
