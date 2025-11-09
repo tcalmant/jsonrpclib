@@ -10,8 +10,5 @@ trim_trailing_whitespace = true
 [*.py]
 indent_size = 4
 
-[*.rst]
-indent_size = 3
-
-[*.{yml,yaml,toml}]
+[*.{yml,yaml,toml,md}]
 indent_size = 2
