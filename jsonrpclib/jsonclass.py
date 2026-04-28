@@ -243,11 +243,11 @@ def load(obj, classes=None):
     # List, set or tuple
     elif isinstance(obj, utils.ITERABLE_TYPES):
         # This comes from a JSON parser, so it can only be a list...
-        return [load(entry) for entry in obj]
+        return [load(entry, classes) for entry in obj]
 
     # Otherwise, it's a dict type
     elif "__jsonclass__" not in obj:
-        return {key: load(value) for key, value in obj.items()}
+        return {key: load(value, classes) for key, value in obj.items()}
 
     # It's a dictionary, and it has a __jsonclass__
     orig_module_name = obj["__jsonclass__"][0]
