@@ -1402,7 +1402,7 @@ def check_for_errors(result):
 
         elif isinstance(result["error"], dict) and len(result["error"]) == 1:
             # Error with a single entry ('reason', ...): use its content
-            error_key = result["error"].keys()[0]
+            error_key = next(iter(result["error"]))
             raise ProtocolError(result["error"][error_key])
 
         else:
