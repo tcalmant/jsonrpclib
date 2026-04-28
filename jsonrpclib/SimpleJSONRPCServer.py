@@ -90,6 +90,9 @@ __docformat__ = "restructuredtext en"
 # Prepare the logger
 _logger = logging.getLogger(__name__)
 
+# Maximum size of a JSON-RPC request body (4 MB)
+MAX_REQUEST_SIZE = 4 * 1024 * 1024
+
 # ------------------------------------------------------------------------------
 
 
@@ -457,8 +460,15 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
     HTTP request handler.
 
     The server that receives the requests must have a json_config member,
-    containing a JSONRPClib Config instance
+    containing a JSONRPClib Config instance.
+
+    Override ``max_request_size`` in a subclass to change the limit per
+    server instance without affecting the module-level default.
     """
+
+    # Maximum accepted Content-Length (in bytes). Override in a subclass to
+    # adjust the limit for a specific server.
+    max_request_size = MAX_REQUEST_SIZE
 
     def do_POST(self):
         """
@@ -475,6 +485,23 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
             # Read the request body
             max_chunk_size = 10 * 1024 * 1024
             size_remaining = int(self.headers["content-length"])
+
+            # Refuse requests exceeding the size limit before reading the body
+            if size_remaining > self.max_request_size:
+                fault = Fault(
+                    -32600,
+                    "Request too large.",
+                    config=config,
+                )
+                response = utils.to_bytes(fault.response())
+                self.send_response(413)
+                self.send_header("Content-type", config.content_type)
+                self.send_header("Content-length", str(len(response)))
+                self.send_header("Connection", "close")
+                self.end_headers()
+                self.wfile.write(response)
+                return
+
             chunks = []
             while size_remaining:
                 chunk_size = min(size_remaining, max_chunk_size)
