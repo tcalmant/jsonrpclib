@@ -273,8 +273,21 @@ def load(obj, classes=None):
             raise TranslationError(
                 "Unknown class or module {0}.".format(json_module_parts[0])
             )
+    elif classes:
+        # A classes registry is provided: refuse dynamic imports to prevent
+        # arbitrary deserialization. Check full name first, then short name.
+        json_class = classes.get(json_module_clean)
+        if json_class is None:
+            json_class = classes.get(json_module_parts[-1])
+        if json_class is None:
+            raise TranslationError(
+                "Class {0} is not registered. Dynamic class loading is "
+                "disabled when a class registry is provided.".format(
+                    orig_module_name
+                )
+            )
     else:
-        # Module + class
+        # No classes registry: allow dynamic import for backward compatibility
         json_class_name = json_module_parts.pop()
         json_module_tree = ".".join(json_module_parts)
         try:
