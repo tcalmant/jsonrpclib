@@ -292,3 +292,42 @@ class HeadersTests(unittest.TestCase):
         self.assertEqual(headers1["x-level-1"], "1")
         self.assertTrue("x-level-2" in headers2)
         self.assertEqual(headers2["x-level-2"], "2")
+
+    def test_content_length_too_large(self):
+        """
+        Tests that requests with a Content-Length exceeding MAX_REQUEST_SIZE
+        are rejected with HTTP 413 before the body is read.
+        """
+        import socket as _socket
+        from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCRequestHandler
+
+        body = b'{"jsonrpc":"2.0","method":"ping","id":"1"}'
+        oversized_length = SimpleJSONRPCRequestHandler.max_request_size + 1
+        raw_request = (
+            "POST / HTTP/1.0\r\n"
+            "Host: {host}\r\n"
+            "Content-Type: application/json-rpc\r\n"
+            "Content-Length: {length}\r\n"
+            "\r\n"
+        ).format(
+            host=HOST, length=oversized_length
+        ).encode("utf-8") + body
+
+        sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+        sock.settimeout(5)
+        try:
+            sock.connect((HOST, self.port))
+            sock.sendall(raw_request)
+            # Read until end of HTTP headers
+            response = b""
+            while b"\r\n\r\n" not in response:
+                chunk = sock.recv(4096)
+                if not chunk:
+                    break
+                response += chunk
+        finally:
+            sock.close()
+
+        # The server must reject with HTTP 413 Request Entity Too Large
+        status_line = response.split(b"\r\n")[0]
+        self.assertIn(b"413", status_line)

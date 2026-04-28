@@ -35,7 +35,7 @@ except ImportError:
 
 
 # JSON-RPC library
-from jsonrpclib.jsonclass import dump, load
+from jsonrpclib.jsonclass import dump, load, TranslationError
 import jsonrpclib.config
 
 
@@ -385,3 +385,11 @@ class SerializationTests(unittest.TestCase):
             result = load(serialized)
             self.assertIsInstance(result, Decimal)
             self.assertEqual(result, d_dec)
+
+    def test_load_unknown_module(self):
+        """
+        Tests that loading a __jsonclass__ pointing to a non-existent module
+        raises TranslationError
+        """
+        obj = {"__jsonclass__": ["nonexistent_module_xyz.SomeClass", []]}
+        self.assertRaises(TranslationError, load, obj)
