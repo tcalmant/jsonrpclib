@@ -1130,7 +1130,7 @@ class Payload(object):
         if not isinstance(method, utils.STRING_TYPES):
             raise ValueError("Method name must be a string.")
 
-        if not self.id:
+        if self.id is None:
             # Generate a request ID
             self.id = str(uuid.uuid4())
 
