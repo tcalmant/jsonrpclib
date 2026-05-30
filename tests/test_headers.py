@@ -11,18 +11,22 @@ import contextlib
 import re
 import socket
 import sys
+import threading
 import unittest
-import jsonrpclib
 
 try:
     # Python 2
     from StringIO import StringIO
-
 except ImportError:
     # Python 3
     from io import StringIO
 
 # JSON-RPC library
+import jsonrpclib
+from jsonrpclib.SimpleJSONRPCServer import (
+    SimpleJSONRPCRequestHandler,
+    SimpleJSONRPCServer,
+)
 from jsonrpclib.utils import from_bytes
 
 # Tests utilities
@@ -298,34 +302,54 @@ class HeadersTests(unittest.TestCase):
         Tests that requests with a Content-Length exceeding MAX_REQUEST_SIZE
         are rejected with HTTP 413 before the body is read.
         """
-        import socket as _socket
-        from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCRequestHandler
+        # Use an explicit, non-zero limit so the check is always active.
+        _LIMIT = 1024
 
-        body = b'{"jsonrpc":"2.0","method":"ping","id":"1"}'
-        oversized_length = SimpleJSONRPCRequestHandler.max_request_size + 1
-        raw_request = (
-            "POST / HTTP/1.0\r\n"
-            "Host: {host}\r\n"
-            "Content-Type: application/json-rpc\r\n"
-            "Content-Length: {length}\r\n"
-            "\r\n"
-        ).format(host=HOST, length=oversized_length).encode("utf-8") + body
+        class _LimitedHandler(SimpleJSONRPCRequestHandler):
+            max_request_size = _LIMIT
 
-        sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
-        sock.settimeout(5)
+            # Silence per-request log lines during the test
+            def log_request(self, code="-", size="-"):
+                pass
+
+        srv = SimpleJSONRPCServer(
+            (HOST, 0), requestHandler=_LimitedHandler, logRequests=False
+        )
+        srv_thread = threading.Thread(target=srv.serve_forever)
+        srv_thread.daemon = True
+        srv_thread.start()
+
         try:
-            sock.connect((HOST, self.port))
-            sock.sendall(raw_request)
-            # Read until end of HTTP headers
-            response = b""
-            while b"\r\n\r\n" not in response:
-                chunk = sock.recv(4096)
-                if not chunk:
-                    break
-                response += chunk
-        finally:
-            sock.close()
+            port = srv.socket.getsockname()[1]
+            body = b'{"jsonrpc":"2.0","method":"ping","id":"1"}'
+            oversized_length = _LIMIT + 1
+            raw_request = (
+                "POST / HTTP/1.0\r\n"
+                "Host: {host}\r\n"
+                "Content-Type: application/json-rpc\r\n"
+                "Content-Length: {length}\r\n"
+                "\r\n"
+            ).format(host=HOST, length=oversized_length).encode("utf-8") + body
 
-        # The server must reject with HTTP 413 Request Entity Too Large
-        status_line = response.split(b"\r\n")[0]
-        self.assertIn(b"413", status_line)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            try:
+                sock.connect((HOST, port))
+                sock.sendall(raw_request)
+                # Read until end of HTTP headers
+                response = b""
+                while b"\r\n\r\n" not in response:
+                    chunk = sock.recv(4096)
+                    if not chunk:
+                        break
+                    response += chunk
+            finally:
+                sock.close()
+
+            # The server must reject with HTTP 413 Request Entity Too Large
+            status_line = response.split(b"\r\n")[0]
+            self.assertIn(b"413", status_line)
+        finally:
+            srv.shutdown()
+            srv.server_close()
+            srv_thread.join(5)
