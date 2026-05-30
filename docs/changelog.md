@@ -1,5 +1,16 @@
 # Release Notes
 
+## 1.1
+
+:Release Date: 2026-05-30
+
+- Fixed access to error message in results
+- Allow the request query ID to be set to 0 or empty string
+- Allow the definition of a classes registry to restrict dynamic imports
+- Allow the definition of a maximum content length to reject large requests
+- Overall code review
+- Disable `cjson` and `simplejson` tests on Python 3.15
+
 ## 1.0
 
 :Release Date: 2025-11-09

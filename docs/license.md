@@ -8,7 +8,7 @@ All contributions must comply with this license.
 
 This snippet is added to the module-level documentation::
 
-    Copyright 2025 Thomas Calmant
+    Copyright 2026 Thomas Calmant
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
