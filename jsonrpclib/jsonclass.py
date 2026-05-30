@@ -4,13 +4,13 @@
 The serialization module
 
 :authors: Josh Marshall, Thomas Calmant
-:copyright: Copyright 2025, Thomas Calmant
+:copyright: Copyright 2026, Thomas Calmant
 :license: Apache License 2.0
-:version: 1.0.0
+:version: 1.1.0
 
 ..
 
-    Copyright 2025 Thomas Calmant
+    Copyright 2026 Thomas Calmant
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ import jsonrpclib.utils as utils
 # ------------------------------------------------------------------------------
 
 # Module version
-__version_info__ = (1, 0, 0)
+__version_info__ = (1, 1, 0)
 __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
