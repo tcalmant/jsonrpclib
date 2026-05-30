@@ -90,8 +90,8 @@ __docformat__ = "restructuredtext en"
 # Prepare the logger
 _logger = logging.getLogger(__name__)
 
-# Maximum size of a JSON-RPC request body (4 MB)
-MAX_REQUEST_SIZE = 4 * 1024 * 1024
+# Maximum size of a JSON-RPC request body (0 means unlimited)
+MAX_REQUEST_SIZE = 0
 
 # ------------------------------------------------------------------------------
 
@@ -487,7 +487,7 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
             size_remaining = int(self.headers["content-length"])
 
             # Refuse requests exceeding the size limit before reading the body
-            if size_remaining > self.max_request_size:
+            if self.max_request_size and size_remaining > self.max_request_size:
                 fault = Fault(
                     -32600,
                     "Request too large.",

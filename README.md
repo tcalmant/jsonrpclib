@@ -150,6 +150,37 @@ server.server_activate()
 server.serve_forever()
 ```
 
+### Maximum request size
+
+The request handler now supports limiting the maximum accepted request body
+size through `MAX_REQUEST_SIZE`.
+
+The default value is `0`, which means **unlimited** and keeps the previous
+behavior.
+
+To enable a limit for a specific server, subclass
+`SimpleJSONRPCRequestHandler` and override `max_request_size`:
+
+```python
+from jsonrpclib.SimpleJSONRPCServer import (
+  SimpleJSONRPCRequestHandler,
+  SimpleJSONRPCServer,
+)
+
+
+class LimitedRequestHandler(SimpleJSONRPCRequestHandler):
+  # Limit request body to 1 MiB
+  max_request_size = 1024 * 1024
+
+
+server = SimpleJSONRPCServer(
+  ("localhost", 8080), requestHandler=LimitedRequestHandler
+)
+```
+
+When the limit is exceeded, the server responds with `HTTP 413`
+(`Request Entity Too Large`).
+
 ### Notification Thread Pool
 
 By default, notification calls are handled in the request handling thread.

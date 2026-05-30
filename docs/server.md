@@ -41,6 +41,36 @@ server.server_activate()
 server.serve_forever()
 ```
 
+## Maximum Request Size
+
+The request handler supports limiting the maximum accepted request body size
+through `MAX_REQUEST_SIZE`.
+
+The default value is `0`, which means **unlimited** and therefore preserves
+the previous behavior.
+
+To configure a limit for one server, subclass
+`SimpleJSONRPCRequestHandler` and override `max_request_size`:
+
+```python
+from jsonrpclib.SimpleJSONRPCServer import (
+    SimpleJSONRPCRequestHandler,
+    SimpleJSONRPCServer,
+)
+
+
+class LimitedRequestHandler(SimpleJSONRPCRequestHandler):
+    # Limit request body to 1 MiB
+    max_request_size = 1024 * 1024
+
+
+server = SimpleJSONRPCServer(
+    ('localhost', 8080), requestHandler=LimitedRequestHandler)
+```
+
+When the limit is exceeded, the server responds with `HTTP 413`
+(`Request Entity Too Large`).
+
 ## A note on logging
 
 `jsonrpclib-pelix` uses the `logging` module from the standard Python
