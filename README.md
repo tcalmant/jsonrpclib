@@ -105,7 +105,7 @@ As a result, you have to configure the Python logging to print out traces.
 The easiest way to do it is to add those lines at the beginning of your code:
 ```python
 import logging
-logging.basiConfig()
+logging.basicConfig()
 ```
 
 More information can be found in the
@@ -119,7 +119,7 @@ Some of the differences in features are that it obviously supports notification,
 batch calls, class translation (if left on), etc.
 
 **Note:** The import line is slightly different from the regular
-`SimpleXMLRPCServer`, since the `SimpleJSONRPCServer` is provided by th
+`SimpleXMLRPCServer`, since the `SimpleJSONRPCServer` is provided by the
 `jsonrpclib` library.
 
 ```python
@@ -384,8 +384,7 @@ Of course `_additional_headers` contexts can be nested as well.
 
 ## Class Translation
 
-The library supports an *"automatic"* class translation process, although it
-is turned off by default.
+The library supports an *"automatic"* class translation process, turned on by default.
 This can be devastatingly slow if improperly used, so the following is just a
 short list of things to keep in mind when using it.
 

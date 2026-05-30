@@ -1297,7 +1297,7 @@ def dumps(
     :param version: JSON-RPC version
     :param notify: If True, this is a notification request
     :param config: A JSONRPClib Config instance
-    :return: A JSON-RPC dictionary
+    :return: The string representation of a JSON-RPC dictionary
     """
     # Prepare the dictionary
     request = dump(
@@ -1422,7 +1422,7 @@ def isbatch(request):
         # Not a list: not a batch call
         return False
     elif len(request) < 1:
-        # Only one request: not a batch call
+        # Empty batch: consider invalid
         return False
     elif not isinstance(request[0], utils.DictType):
         # One of the requests is not a dictionary, i.e. a JSON Object

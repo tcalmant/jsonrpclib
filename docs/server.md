@@ -24,6 +24,7 @@ server.serve_forever()
 To start protect the server with SSL, use the following snippet:
 
 ```python
+import ssl
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 
 # Setup the SSL socket
@@ -73,7 +74,7 @@ pool = ThreadPool(max_threads=10, min_threads=0)
 pool.start()
 
 # Setup the server
-server = SimpleJSONRPCServer(('localhost', 8080), config)
+server = SimpleJSONRPCServer(('localhost', 8080))
 server.set_notification_pool(pool)
 
 # Register methods
@@ -104,17 +105,17 @@ from jsonrpclib.SimpleJSONRPCServer import PooledJSONRPCServer
 from jsonrpclib.threadpool import ThreadPool
 
 # Setup the notification and request pools
-nofif_pool = ThreadPool(max_threads=10, min_threads=0)
+notification_pool = ThreadPool(max_threads=10, min_threads=0)
 request_pool = ThreadPool(max_threads=50, min_threads=10)
 
 # Don't forget to start them
-nofif_pool.start()
+notification_pool.start()
 request_pool.start()
 
 # Setup the server
 server = PooledJSONRPCServer(
-    ('localhost', 8080), config, thread_pool=request_pool)
-server.set_notification_pool(nofif_pool)
+    ('localhost', 8080), thread_pool=request_pool)
+server.set_notification_pool(notification_pool)
 
 # Register methods
 server.register_function(pow)
@@ -126,7 +127,7 @@ try:
 finally:
     # Stop the thread pools (let threads finish their current task)
     request_pool.stop()
-    nofif_pool.stop()
+    notification_pool.stop()
     server.set_notification_pool(None)
 ```
 
