@@ -309,9 +309,7 @@ class HeadersTests(unittest.TestCase):
             "Content-Type: application/json-rpc\r\n"
             "Content-Length: {length}\r\n"
             "\r\n"
-        ).format(
-            host=HOST, length=oversized_length
-        ).encode("utf-8") + body
+        ).format(host=HOST, length=oversized_length).encode("utf-8") + body
 
         sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
         sock.settimeout(5)
