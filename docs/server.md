@@ -24,6 +24,7 @@ server.serve_forever()
 To start protect the server with SSL, use the following snippet:
 
 ```python
+import ssl
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 
 # Setup the SSL socket
@@ -39,6 +40,36 @@ server.server_activate()
 # Start the server
 server.serve_forever()
 ```
+
+## Maximum Request Size
+
+The request handler supports limiting the maximum accepted request body size
+through `MAX_REQUEST_SIZE`.
+
+The default value is `0`, which means **unlimited** and therefore preserves
+the previous behavior.
+
+To configure a limit for one server, subclass
+`SimpleJSONRPCRequestHandler` and override `max_request_size`:
+
+```python
+from jsonrpclib.SimpleJSONRPCServer import (
+    SimpleJSONRPCRequestHandler,
+    SimpleJSONRPCServer,
+)
+
+
+class LimitedRequestHandler(SimpleJSONRPCRequestHandler):
+    # Limit request body to 1 MiB
+    max_request_size = 1024 * 1024
+
+
+server = SimpleJSONRPCServer(
+    ('localhost', 8080), requestHandler=LimitedRequestHandler)
+```
+
+When the limit is exceeded, the server responds with `HTTP 413`
+(`Request Entity Too Large`).
 
 ## A note on logging
 
@@ -73,7 +104,7 @@ pool = ThreadPool(max_threads=10, min_threads=0)
 pool.start()
 
 # Setup the server
-server = SimpleJSONRPCServer(('localhost', 8080), config)
+server = SimpleJSONRPCServer(('localhost', 8080))
 server.set_notification_pool(pool)
 
 # Register methods
@@ -104,17 +135,17 @@ from jsonrpclib.SimpleJSONRPCServer import PooledJSONRPCServer
 from jsonrpclib.threadpool import ThreadPool
 
 # Setup the notification and request pools
-nofif_pool = ThreadPool(max_threads=10, min_threads=0)
+notification_pool = ThreadPool(max_threads=10, min_threads=0)
 request_pool = ThreadPool(max_threads=50, min_threads=10)
 
 # Don't forget to start them
-nofif_pool.start()
+notification_pool.start()
 request_pool.start()
 
 # Setup the server
 server = PooledJSONRPCServer(
-    ('localhost', 8080), config, thread_pool=request_pool)
-server.set_notification_pool(nofif_pool)
+    ('localhost', 8080), thread_pool=request_pool)
+server.set_notification_pool(notification_pool)
 
 # Register methods
 server.register_function(pow)
@@ -126,7 +157,7 @@ try:
 finally:
     # Stop the thread pools (let threads finish their current task)
     request_pool.stop()
-    nofif_pool.stop()
+    notification_pool.stop()
     server.set_notification_pool(None)
 ```
 

@@ -179,3 +179,47 @@ class InternalTests(unittest.TestCase):
         )
 
         self.assertRaises(jsonrpclib.TransportError, badserver.foo)
+
+
+# ------------------------------------------------------------------------------
+
+
+class CheckForErrorsTests(unittest.TestCase):
+    """
+    Tests for the check_for_errors function
+    """
+
+    def test_single_key_error(self):
+        """
+        Tests check_for_errors with a single-key error dict (non-standard
+        format, e.g. from jabsorb). Verifies the fix for dict.keys()[0]
+        which is incompatible with Python 3.
+        """
+        from jsonrpclib.jsonrpc import check_for_errors
+
+        result = {
+            "jsonrpc": "2.0",
+            "id": "1",
+            "error": {"reason": "something went wrong"},
+        }
+        with self.assertRaises(jsonrpclib.ProtocolError) as ctx:
+            check_for_errors(result)
+        self.assertIn("something went wrong", str(ctx.exception))
+
+
+class PayloadTests(unittest.TestCase):
+    """
+    Tests for the Payload class
+    """
+
+    def test_request_rpcid_zero(self):
+        """
+        Tests that rpcid=0 is preserved and not overwritten.
+        Verifies the fix for 'if not self.id' (falsy check) vs
+        'if self.id is None'.
+        """
+        from jsonrpclib.jsonrpc import Payload
+
+        payload = Payload(rpcid=0, version=2.0)
+        request = payload.request("test_method")
+        self.assertEqual(request["id"], 0)

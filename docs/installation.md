@@ -2,7 +2,7 @@
 
 ## Requirements
 
-It supports `orjson`, `cjson` and `simplejson`, and looks for the parsers
+It supports `orjson`, `ujson`, `cjson` and `simplejson`, and looks for the parsers
 in that order (searching first for `orjson`, `ujson`, `cjson`, `simplejson` and
 finally for the built-in `json`).
 One of these must be installed to use this library, although if you have a

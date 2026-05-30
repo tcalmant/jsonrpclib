@@ -80,6 +80,17 @@ python_supports_pydantic() {
     fi
 }
 
+python_before_3_15() {
+    if [ -z "$UV" ]
+    then
+        python3 -c 'import sys; exit(sys.version_info[:2] >= (3, 15))' >/dev/null 2>&1
+        return $?
+    else
+        uv run python -c 'import sys; exit(sys.version_info[:2] >= (3, 15))' >/dev/null 2>&1
+        return $?
+    fi
+}
+
 echo "Installing dependencies..."
 run_pip_install pytest coverage || exit 1
 export COVERAGE_PROCESS_START=".coveragerc"
@@ -104,11 +115,17 @@ run_lib_tests orjson orjson || exit 1
 echo "uJson tests..."
 run_lib_tests ujson ujson || exit 1
 
-echo "cJson tests..."
-run_lib_tests cjson python-cjson || exit 1
+if python_before_3_15
+then
+    echo "cJson tests..."
+    run_lib_tests cjson python-cjson || exit 1
 
-echo "simplejson tests..."
-run_lib_tests simplejson simplejson || exit 1
+    echo "simplejson tests..."
+    run_lib_tests simplejson simplejson || exit 1
+else
+    echo "Ignoring cjson and simplejson tests: Python 3.15+ is not supported."
+fi
+
 
 echo "Combine results..."
 run_coverage combine || exit $?

@@ -105,7 +105,7 @@ As a result, you have to configure the Python logging to print out traces.
 The easiest way to do it is to add those lines at the beginning of your code:
 ```python
 import logging
-logging.basiConfig()
+logging.basicConfig()
 ```
 
 More information can be found in the
@@ -119,7 +119,7 @@ Some of the differences in features are that it obviously supports notification,
 batch calls, class translation (if left on), etc.
 
 **Note:** The import line is slightly different from the regular
-`SimpleXMLRPCServer`, since the `SimpleJSONRPCServer` is provided by th
+`SimpleXMLRPCServer`, since the `SimpleJSONRPCServer` is provided by the
 `jsonrpclib` library.
 
 ```python
@@ -149,6 +149,37 @@ server.server_activate()
 # Start the server
 server.serve_forever()
 ```
+
+### Maximum request size
+
+The request handler now supports limiting the maximum accepted request body
+size through `MAX_REQUEST_SIZE`.
+
+The default value is `0`, which means **unlimited** and keeps the previous
+behavior.
+
+To enable a limit for a specific server, subclass
+`SimpleJSONRPCRequestHandler` and override `max_request_size`:
+
+```python
+from jsonrpclib.SimpleJSONRPCServer import (
+  SimpleJSONRPCRequestHandler,
+  SimpleJSONRPCServer,
+)
+
+
+class LimitedRequestHandler(SimpleJSONRPCRequestHandler):
+  # Limit request body to 1 MiB
+  max_request_size = 1024 * 1024
+
+
+server = SimpleJSONRPCServer(
+  ("localhost", 8080), requestHandler=LimitedRequestHandler
+)
+```
+
+When the limit is exceeded, the server responds with `HTTP 413`
+(`Request Entity Too Large`).
 
 ### Notification Thread Pool
 
@@ -384,8 +415,7 @@ Of course `_additional_headers` contexts can be nested as well.
 
 ## Class Translation
 
-The library supports an *"automatic"* class translation process, although it
-is turned off by default.
+The library supports an *"automatic"* class translation process, turned on by default.
 This can be devastatingly slow if improperly used, so the following is just a
 short list of things to keep in mind when using it.
 
@@ -481,6 +511,11 @@ python3 -m unittest discover tests
 nosetests tests
 pytest tests
 ```
+
+### A note on Python 2.7
+
+Running tests as is on Python 2.7 will fail as the `tests/test_pydantic.py` uses
+type annotations and therefore raises a `SyntaxError`. This error can be ignored.
 
 ## Why JSON-RPC?
 

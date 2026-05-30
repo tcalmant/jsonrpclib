@@ -243,11 +243,11 @@ def load(obj, classes=None):
     # List, set or tuple
     elif isinstance(obj, utils.ITERABLE_TYPES):
         # This comes from a JSON parser, so it can only be a list...
-        return [load(entry) for entry in obj]
+        return [load(entry, classes) for entry in obj]
 
     # Otherwise, it's a dict type
     elif "__jsonclass__" not in obj:
-        return {key: load(value) for key, value in obj.items()}
+        return {key: load(value, classes) for key, value in obj.items()}
 
     # It's a dictionary, and it has a __jsonclass__
     orig_module_name = obj["__jsonclass__"][0]
@@ -273,8 +273,21 @@ def load(obj, classes=None):
             raise TranslationError(
                 "Unknown class or module {0}.".format(json_module_parts[0])
             )
+    elif classes:
+        # A classes registry is provided: refuse dynamic imports to prevent
+        # arbitrary deserialization. Check full name first, then short name.
+        json_class = classes.get(json_module_clean)
+        if json_class is None:
+            json_class = classes.get(json_module_parts[-1])
+        if json_class is None:
+            raise TranslationError(
+                "Class {0} is not registered. Dynamic class loading is "
+                "disabled when a class registry is provided.".format(
+                    orig_module_name
+                )
+            )
     else:
-        # Module + class
+        # No classes registry: allow dynamic import for backward compatibility
         json_class_name = json_module_parts.pop()
         json_module_tree = ".".join(json_module_parts)
         try:

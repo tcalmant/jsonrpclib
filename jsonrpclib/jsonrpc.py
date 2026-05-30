@@ -1130,7 +1130,7 @@ class Payload(object):
         if not isinstance(method, utils.STRING_TYPES):
             raise ValueError("Method name must be a string.")
 
-        if not self.id:
+        if self.id is None:
             # Generate a request ID
             self.id = str(uuid.uuid4())
 
@@ -1297,7 +1297,7 @@ def dumps(
     :param version: JSON-RPC version
     :param notify: If True, this is a notification request
     :param config: A JSONRPClib Config instance
-    :return: A JSON-RPC dictionary
+    :return: The string representation of a JSON-RPC dictionary
     """
     # Prepare the dictionary
     request = dump(
@@ -1402,7 +1402,7 @@ def check_for_errors(result):
 
         elif isinstance(result["error"], dict) and len(result["error"]) == 1:
             # Error with a single entry ('reason', ...): use its content
-            error_key = result["error"].keys()[0]
+            error_key = next(iter(result["error"]))
             raise ProtocolError(result["error"][error_key])
 
         else:
@@ -1422,7 +1422,7 @@ def isbatch(request):
         # Not a list: not a batch call
         return False
     elif len(request) < 1:
-        # Only one request: not a batch call
+        # Empty batch: consider invalid
         return False
     elif not isinstance(request[0], utils.DictType):
         # One of the requests is not a dictionary, i.e. a JSON Object
