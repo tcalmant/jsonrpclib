@@ -512,6 +512,11 @@ nosetests tests
 pytest tests
 ```
 
+### A note on Python 2.7
+
+Running tests as is on Python 2.7 will fail as the `tests/test_pydantic.py` uses
+type annotations and therefore raises a `SyntaxError`. This error can be ignored.
+
 ## Why JSON-RPC?
 
 In my opinion, there are several reasons to choose JSON over XML for RPC:
