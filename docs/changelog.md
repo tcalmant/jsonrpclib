@@ -39,7 +39,9 @@
   across the modules and `pyproject.toml`, and enforces `ruff` (a Python
   2.7-safe rule set) and `black`.
 - Added `run_tests_containers.sh` to run the test suite in containers across
-  every supported Python version, including 2.7 and 3.6.
+  every supported Python version, including 2.7 and 3.6. Continuous integration
+  now uses it to test the whole supported matrix (2.7 through 3.15), instead of
+  only the versions the runner can install directly.
 
 ## 1.1
 
