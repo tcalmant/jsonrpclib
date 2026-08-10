@@ -1,0 +1,101 @@
+# Lints the code, runs the tests on every supported Python version, and reports
+# coverage.
+#
+# The tests run inside the matching official ``python:<version>`` container
+# (3.15 uses its release-candidate image) via ./run_tests_containers.sh. This is
+# what lets the CI cover 2.7, 3.6 and 3.15 too — actions/setup-python cannot
+# provide those on a current runner, which is why the plain matrix used to fail
+# on 3.15.
+
+name: CI Build
+
+on:
+  push:
+    branches: ["main"]
+    tags:
+      - "**"
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  lint:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Install the linters
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff black
+      - name: Lint with ruff
+        # A Python 2.7-safe rule set (the pyupgrade rewrites are excluded);
+        # configured in pyproject.toml
+        run: ruff check .
+      - name: Check the formatting with black
+        run: black --check .
+      - name: Check the declared version
+        # The version is repeated in pyproject.toml and in every module, both as a
+        # __version_info__ tuple and as a ':version:' docstring field: catch a
+        # half-applied bump here rather than when publishing.
+        run: python .github/scripts/check_version.py
+
+  test:
+    needs: lint
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every version declared as supported. Each runs in its matching
+        # python:<version> container (3.15 -> the release-candidate image),
+        # which is the only way to cover 2.7 and 3.6 on a modern runner.
+        python-version:
+          [
+            "2.7",
+            "3.6",
+            "3.7",
+            "3.8",
+            "3.9",
+            "3.10",
+            "3.11",
+            "3.12",
+            "3.13",
+            "3.14",
+            "3.15-rc",
+          ]
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run the suite in a Python ${{ matrix.python-version }} container
+        # ./run_tests_containers.sh streams a clean copy of the tree into the
+        # container and runs ./run_tests.sh, which also cycles the optional JSON
+        # backends. The engine is pinned to Docker (the runner ships both Docker
+        # and Podman, and the script prefers Podman otherwise).
+        env:
+          CONTAINER_ENGINE: docker
+        run: ./run_tests_containers.sh ${{ matrix.python-version }}
+
+  coverage:
+    needs: lint
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Run the suite with coverage
+        run: ./run_tests.sh
+      - name: Coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
+        run: |
+          pip install coveralls
+          coveralls

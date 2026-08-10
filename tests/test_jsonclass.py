@@ -24,7 +24,6 @@ try:
         BLUE = 1
         RED = 2
 
-
 except ImportError:
     enum = None  # type: ignore
 
@@ -35,9 +34,8 @@ except ImportError:
 
 
 # JSON-RPC library
-from jsonrpclib.jsonclass import dump, load, TranslationError
 import jsonrpclib.config
-
+from jsonrpclib.jsonclass import TranslationError, dump, load
 
 # ------------------------------------------------------------------------------
 

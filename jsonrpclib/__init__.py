@@ -6,7 +6,7 @@ Aliases to ease access to jsonrpclib classes
 :authors: Josh Marshall, Thomas Calmant
 :copyright: Copyright 2026, Thomas Calmant
 :license: Apache License 2.0
-:version: 1.1.0
+:version: 1.2.0
 
 ..
 
@@ -25,25 +25,30 @@ Aliases to ease access to jsonrpclib classes
     limitations under the License.
 """
 
-# Easy access to utility methods and classes
-from jsonrpclib.jsonrpc import Server, ServerProxy  # noqa: F401
-from jsonrpclib.jsonrpc import (  # noqa: F401
-    MultiCall,
-    Fault,
-    ProtocolError,
-    AppError,
-    TransportError,
-)
-from jsonrpclib.jsonrpc import loads, dumps, load, dump  # noqa: F401
-from jsonrpclib.jsonrpc import jloads, jdumps  # noqa: F401
+# Easy access to utility methods and classes (re-exported on purpose)
 import jsonrpclib.history as history  # noqa: F401
 import jsonrpclib.utils as utils  # noqa: F401
+from jsonrpclib.jsonrpc import (  # noqa: F401
+    AppError,
+    Fault,
+    MultiCall,
+    ProtocolError,
+    Server,
+    ServerProxy,
+    TransportError,
+    dump,
+    dumps,
+    jdumps,
+    jloads,
+    load,
+    loads,
+)
 
 # ------------------------------------------------------------------------------
 
 
 # Module version
-__version_info__ = (1, 1, 0)
+__version_info__ = (1, 2, 0)
 __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format

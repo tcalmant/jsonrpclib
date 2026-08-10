@@ -1,5 +1,48 @@
 # Release Notes
 
+## 1.2
+
+:Release Date: Unreleased
+
+### Security
+
+- Class translation (`jsonclass`) no longer imports arbitrary classes by
+  default. A `__jsonclass__` payload could previously make a server or client
+  instantiate any importable class with attacker-controlled arguments, when
+  `use_jsonclass` was enabled (the default) and no class registry was set.
+  Dynamic import is now opt-in through the new `Config.allow_dynamic_classes`
+  flag (default `False`); unregistered classes are refused with a
+  `TranslationError`. Restrict what may be instantiated with `Config.classes`,
+  and only enable class translation between endpoints you trust.
+
+### Fixed
+
+- `ServerProxy._additional_headers` no longer leaks headers when the wrapped
+  call raises: the additional headers are now always removed from the transport
+  when leaving the `with` block.
+
+### Project
+
+- Distributions are now built as a universal `py2.py3-none-any` wheel again, so
+  Python 2.7 users can install from a wheel. The build backend moved to
+  setuptools and `requires-python` was corrected to include 2.7.
+- `python setup.py install` works again on Python 2.7 (metadata is provided
+  explicitly there, since its setuptools predates `pyproject.toml` metadata).
+- Added a `SECURITY.md` (supported versions and how to report a vulnerability),
+  a `CONTRIBUTING.md` and a Dependabot configuration.
+- Releases are now built and published by a `Publish` GitHub Actions workflow,
+  triggered by a signed tag, using PyPI Trusted Publishing (no stored token),
+  with a SLSA build provenance attestation, a CycloneDX SBOM and PEP 740
+  attestations on each artifact. The release notes are generated from this
+  changelog.
+- Continuous integration now checks that the version is declared consistently
+  across the modules and `pyproject.toml`, and enforces `ruff` (a Python
+  2.7-safe rule set) and `black`.
+- Added `run_tests_containers.sh` to run the test suite in containers across
+  every supported Python version, including 2.7 and 3.6. Continuous integration
+  now uses it to test the whole supported matrix (2.7 through 3.15), instead of
+  only the versions the runner can install directly.
+
 ## 1.1
 
 :Release Date: 2026-05-30

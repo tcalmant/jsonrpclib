@@ -58,50 +58,48 @@ run_lib_tests() {
     return $rc
 }
 
-python_supports_pydantic() {
+run_python() {
     if [ -z "$UV" ]
     then
-        # uv requires Python 3.8+, supported by Pydantic
-        return 1
-    fi
-
-    python -c 'import sys; exit(sys.version_info[:2] >= (3, 7)' >/dev/null 2>&1
-    if [ $? -eq 0 ]
-    then
-        return 1
-    fi
-
-    python3 -c 'import sys; exit(sys.version_info[:2] >= (3, 7)' >/dev/null 2>&1
-    if [ $? -eq 0 ]
-    then
-        return 1
+        python "$@"
+        return $?
     else
-        return 0
+        uv run python "$@"
+        return $?
     fi
 }
 
+# test_pydantic.py uses type annotations, so it cannot even be imported on
+# Python 2 (SyntaxError). On Python 3 it self-skips when Pydantic is missing,
+# so it is always safe to collect there.
+python_is_py3() {
+    run_python -c 'import sys; sys.exit(0 if sys.version_info[0] >= 3 else 1)' \
+        >/dev/null 2>&1
+}
+
+# cjson and simplejson are only tested before Python 3.15 (see the changelog).
 python_before_3_15() {
-    if [ -z "$UV" ]
-    then
-        python3 -c 'import sys; exit(sys.version_info[:2] >= (3, 15))' >/dev/null 2>&1
-        return $?
-    else
-        uv run python -c 'import sys; exit(sys.version_info[:2] >= (3, 15))' >/dev/null 2>&1
-        return $?
-    fi
+    run_python \
+        -c 'import sys; sys.exit(0 if sys.version_info[:2] < (3, 15) else 1)' \
+        >/dev/null 2>&1
 }
 
 echo "Installing dependencies..."
 run_pip_install pytest coverage || exit 1
 export COVERAGE_PROCESS_START=".coveragerc"
 
-if python_supports_pydantic
+if python_is_py3
 then
-    echo "Try installing pydantic..."
-    run_pip_install pydantic
+    echo "Trying to install Pydantic for its tests..."
+    if run_pip_install pydantic
+    then
+        echo "Pydantic installed: including its tests"
+    else
+        echo "Pydantic unavailable here: its tests will self-skip"
+    fi
     EXTRA_ARGS=()
 else
-    echo "Ignoring Pydantic tests"
+    echo "Python 2: ignoring the Pydantic tests (they use annotations)"
     EXTRA_ARGS=("--ignore" "tests/test_pydantic.py")
 fi
 

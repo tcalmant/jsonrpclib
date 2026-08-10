@@ -11,11 +11,11 @@ talk to each other properly.
 import json
 import unittest
 
-# Tests utilities
-from tests.utilities import UtilityServer
-
 # JSON-RPC library
 import jsonrpclib
+
+# Tests utilities
+from tests.utilities import UtilityServer
 
 # ------------------------------------------------------------------------------
 

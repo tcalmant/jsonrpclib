@@ -6,7 +6,7 @@ Utility methods, for compatibility between Python version
 :author: Thomas Calmant
 :copyright: Copyright 2026, Thomas Calmant
 :license: Apache License 2.0
-:version: 1.1.0
+:version: 1.2.0
 
 ..
 
@@ -30,7 +30,7 @@ import sys
 # ------------------------------------------------------------------------------
 
 # Module version
-__version_info__ = (1, 1, 0)
+__version_info__ = (1, 2, 0)
 __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
@@ -74,7 +74,6 @@ if sys.version_info[0] < 3:
         """
         return False
 
-
 else:
     # Python 3
     # pylint: disable=E1101
@@ -108,6 +107,7 @@ else:
             for base in obj.__class__.__mro__
         )
 
+
 # ------------------------------------------------------------------------------
 # Enumerations
 
@@ -122,7 +122,6 @@ try:
         :return: True if the object is an enumeration item
         """
         return isinstance(obj, enum.Enum)
-
 
 except ImportError:
     # Pre-Python 3.4
@@ -150,7 +149,6 @@ try:
         :return: True if the object is a Decimal
         """
         return isinstance(obj, decimal.Decimal)
-
 
 except ImportError:
     # Decimal introduced in Python 2.4

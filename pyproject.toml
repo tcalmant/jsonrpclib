@@ -1,13 +1,10 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["jsonrpclib"]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "jsonrpclib-pelix"
-version = "1.1.0"
+version = "1.2.0"
 authors = [
   { name="Thomas Calmant", email="thomas.calmant+github@gmail.com" }
 ]
@@ -16,11 +13,13 @@ description = """\
   usable with Pelix/iPOPO remote services.\
   """
 readme = "README.md"
-requires-python = ">=3.6"
+# Python 2.7, then 3.6+ (the 3.0-3.5 exclusions keep pip from selecting a
+# release on a Python version the code does not support). Keep in sync with the
+# classifiers below.
+requires-python = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: Apache Software License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 2.7",
   "Programming Language :: Python :: 3",
@@ -50,11 +49,36 @@ dev = [
     "pytest>=7.0.1",
 ]
 
+[tool.setuptools]
+packages = ["jsonrpclib"]
+
+# Produce a universal ``py2.py3-none-any`` wheel: the code base is pure Python
+# and supports both Python 2.7 and 3, so a single wheel serves every supported
+# interpreter (2.7 users install this wheel rather than building from source).
+[tool.distutils.bdist_wheel]
+universal = true
+
 [tool.black]
 line-length = 80
+# The code base still supports Python 2.7, but Black cannot target it; py37 is
+# the conservative floor. Black only reformats, so it never introduces syntax
+# that would break the 2.7 interpreter.
+target-version = ["py37"]
 
 [tool.ruff]
 line-length = 80
 
 [tool.ruff.lint]
-extend-select = ["I"]
+# Explicit, Python-2.7-safe rule set. Keep pyflakes (F), pycodestyle (E),
+# isort (I) and flake8-simplify (SIM). The pyupgrade (UP) family is
+# deliberately NOT selected: its rewrites (f-strings, dropping `object` bases,
+# removing __future__/py2 import shims) break Python 2.7, which the 1.x line
+# still supports. That cleanup belongs to the 2.x line.
+select = ["E", "F", "I", "SIM"]
+ignore = [
+    # contextlib.suppress() does not exist before Python 3.4
+    "SIM105",
+    # Combining nested `with` statements can force the parenthesised
+    # context-manager form, which is Python 3.10+ syntax and breaks 2.7
+    "SIM117",
+]
