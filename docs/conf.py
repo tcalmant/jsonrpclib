@@ -8,14 +8,14 @@
 
 # -- Path setup --------------------------------------------------------------
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+# The package lives one directory up from docs/; add it to sys.path so that the
+# version can be read from it (and for autodoc).
+import os
+import sys
 
+sys.path.insert(0, os.path.abspath(".."))
+
+from jsonrpclib import __version__  # noqa: E402
 
 # -- Project information -----------------------------------------------------
 
@@ -24,9 +24,9 @@ copyright = "2025, Thomas Calmant"
 author = "Thomas Calmant"
 
 # The short X.Y version
-version = "1.0"
+version = __version__
 # The full version, including alpha/beta/rc tags
-release = "1.0.0"
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------
