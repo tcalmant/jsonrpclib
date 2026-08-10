@@ -2,7 +2,7 @@
 
 [![Latest Version](https://img.shields.io/pypi/v/jsonrpclib-pelix.svg)](https://pypi.python.org/pypi/jsonrpclib-pelix/)
 [![License](https://img.shields.io/pypi/l/jsonrpclib-pelix.svg)](https://pypi.python.org/pypi/jsonrpclib-pelix/)
-[![CI Build](https://github.com/tcalmant/jsonrpclib/actions/workflows/build-24.04.yml/badge.svg?branch=main)](https://github.com/tcalmant/jsonrpclib/actions/workflows/build-24.04.yml)
+[![CI Build](https://github.com/tcalmant/jsonrpclib/actions/workflows/ci-build.yml/badge.svg?branch=main)](https://github.com/tcalmant/jsonrpclib/actions/workflows/ci-build.yml)
 [![Coveralls status](https://coveralls.io/repos/tcalmant/jsonrpclib/badge.svg?branch=main)](https://coveralls.io/r/tcalmant/jsonrpclib?branch=main)
 
 This library is an implementation of the JSON-RPC specification.
