@@ -18,7 +18,7 @@ never shipped), so it may use ``tomllib`` on 3.11+ with a fallback.
 :author: Thomas Calmant
 :copyright: Copyright 2026, Thomas Calmant
 :license: Apache License 2.0
-:version: 1.1.0
+:version: 1.2.0
 
 ..
 
@@ -49,21 +49,21 @@ except ModuleNotFoundError:  # pragma: no cover
     tomllib = None
 
 # Module version
-__version_info__ = (1, 1, 0)
+__version_info__ = (1, 2, 0)
 __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
 __docformat__ = "restructuredtext en"
 
-#: Matches ``__version_info__ = (1, 1, 0)``
+#: Matches ``__version_info__ = (1, 2, 0)``
 VERSION_INFO_PATTERN = re.compile(
     r"^__version_info__\s*=\s*\(([^)]*)\)", re.MULTILINE
 )
 
-#: Matches the ``:version: 1.1.0`` field of a module docstring
+#: Matches the ``:version: 1.2.0`` field of a module docstring
 VERSION_FIELD_PATTERN = re.compile(r"^:version:\s*(\S+)\s*$", re.MULTILINE)
 
-#: Matches ``version = "1.1.0"`` in pyproject.toml (fallback if tomllib absent)
+#: Matches ``version = "1.2.0"`` in pyproject.toml (fallback if tomllib absent)
 PYPROJECT_VERSION_PATTERN = re.compile(
     r'^\s*version\s*=\s*"([^"]+)"', re.MULTILINE
 )
@@ -150,7 +150,7 @@ def main():
     parser.add_argument(
         "tag",
         nargs="?",
-        help="Release tag the declared version must match, e.g. 1.1.0",
+        help="Release tag the declared version must match, e.g. 1.2.0",
     )
     parser.add_argument(
         "--package",

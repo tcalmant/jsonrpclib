@@ -6,7 +6,7 @@ Aliases to ease access to jsonrpclib classes
 :authors: Josh Marshall, Thomas Calmant
 :copyright: Copyright 2026, Thomas Calmant
 :license: Apache License 2.0
-:version: 1.1.0
+:version: 1.2.0
 
 ..
 
@@ -48,7 +48,7 @@ from jsonrpclib.jsonrpc import (  # noqa: F401
 
 
 # Module version
-__version_info__ = (1, 1, 0)
+__version_info__ = (1, 2, 0)
 __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format

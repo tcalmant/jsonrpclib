@@ -16,7 +16,7 @@ This script is CI-only tooling and never shipped, so it is Python 3 only.
 :author: Thomas Calmant
 :copyright: Copyright 2026, Thomas Calmant
 :license: Apache License 2.0
-:version: 1.1.0
+:version: 1.2.0
 
 ..
 
@@ -43,7 +43,7 @@ import sys
 from xml.etree import ElementTree
 
 # Module version
-__version_info__ = (1, 1, 0)
+__version_info__ = (1, 2, 0)
 __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
