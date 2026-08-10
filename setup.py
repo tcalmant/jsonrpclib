@@ -1,81 +1,51 @@
 #!/usr/bin/env python
 # -- Content-Encoding: UTF-8 --
 """
-Installation script
+Installation script.
+
+All project metadata lives in ``pyproject.toml`` (the ``[project]`` table),
+which is read by setuptools 61+ and by every PEP 517 build front-end. On
+Python 3 this file therefore only calls ``setup()`` with no argument.
+
+Python 2.7 ships a setuptools too old to understand that table, so when this
+file is executed directly on Python 2 (``python setup.py install``) it supplies
+the metadata explicitly. The version is read from ``jsonrpclib/__init__.py`` so
+that it is never declared a second time.
 
 :authors: Josh Marshall, Thomas Calmant
-:copyright: Copyright 2026, Thomas Calmant
 :license: Apache License 2.0
-:version: 1.1.0
-
-..
-
-    Copyright 2026 Thomas Calmant
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-        https://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
 """
 
-# Module version
-__version_info__ = (1, 1, 0)
-__version__ = ".".join(str(x) for x in __version_info__)
+import io
+import re
+import sys
 
-# Documentation strings format
-__docformat__ = "restructuredtext en"
+from setuptools import setup
 
-# ------------------------------------------------------------------------------
+if sys.version_info[0] < 3:
+    # Python 2.7: old setuptools cannot read [project] from pyproject.toml, so
+    # the metadata is given here. The version is parsed from the package to
+    # avoid a second source of truth.
+    with io.open("jsonrpclib/__init__.py", encoding="utf-8") as fh:
+        _match = re.search(r"__version_info__\s*=\s*\(([^)]*)\)", fh.read())
+    _version = ".".join(part.strip() for part in _match.group(1).split(","))
 
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+    with io.open("README.md", encoding="utf-8") as fh:
+        _long_description = fh.read()
 
-# ------------------------------------------------------------------------------
-
-# Read the description file
-with open("README.md", "r") as fh:
-    long_description = fh.read()
-
-setup(
-    name="jsonrpclib-pelix",
-    version=__version__,
-    license="Apache License 2.0",
-    author="Thomas Calmant",
-    author_email="thomas.calmant+github@gmail.com",
-    url="https://github.com/tcalmant/jsonrpclib/",
-    description="This project is an implementation of the JSON-RPC v2.0 "
-    "specification (backwards-compatible) as a client library, for Python 2.7 "
-    "and Python 3. This version is a fork of jsonrpclib by Josh Marshall, "
-    "made to be also usable with Pelix/iPOPO remote services.",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    packages=["jsonrpclib"],
-    test_suite="tests",
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Intended Audience :: Developers",
-        "License :: OSI Approved :: Apache Software License",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-        "Programming Language :: Python :: 3.13",
-        "Programming Language :: Python :: 3.14",
-        "Programming Language :: Python :: 3.15",
-    ],
-)
+    setup(
+        name="jsonrpclib-pelix",
+        version=_version,
+        license="Apache License 2.0",
+        author="Thomas Calmant",
+        author_email="thomas.calmant+github@gmail.com",
+        url="https://github.com/tcalmant/jsonrpclib/",
+        description="JSON-RPC v2.0 client and server for Python 2.7 and 3.6+, "
+        "usable with Pelix/iPOPO remote services",
+        long_description=_long_description,
+        long_description_content_type="text/markdown",
+        packages=["jsonrpclib"],
+    )
+else:
+    # Python 3: setuptools reads everything from pyproject.toml
+    setup()

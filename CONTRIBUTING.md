@@ -83,6 +83,18 @@ The `tests/test_jsonlib.py` cases only assert something when
 `run_tests.sh` sets it for you. On Python 2.7, `tests/test_pydantic.py` raises a
 `SyntaxError` on import and must be ignored (`--ignore tests/test_pydantic.py`).
 
+To run `./run_tests.sh` on every supported Python version — including 2.7 and
+3.6, which are outside the GitHub Actions matrix — use the container runner
+(needs `podman` or `docker`):
+
+```bash
+./run_tests_containers.sh              # all supported versions
+./run_tests_containers.sh 2.7 3.6      # only these
+```
+
+It streams a clean copy of the tree into an official `python:<version>` image
+and reports a pass/fail summary, without touching your working copy.
+
 Before opening a pull request:
 
 ```bash
@@ -103,10 +115,9 @@ fixes go in a `### Security` subsection of the release they ship in.
 Releases are made by the maintainer; the steps are written down so they are
 reproducible.
 
-1. **Bump the version.** It is declared in `pyproject.toml`, `setup.py` and, in
-   every module of `jsonrpclib`, both as `__version_info__` and as the
-   `:version:` docstring field. Also update `docs/conf.py`. All of them must
-   agree:
+1. **Bump the version.** It is declared in `pyproject.toml` and, in every module
+   of `jsonrpclib`, both as `__version_info__` and as the `:version:` docstring
+   field. Also update `docs/conf.py`. All of them must agree:
 
    ```bash
    python .github/scripts/check_version.py
@@ -124,8 +135,12 @@ reproducible.
    ./run_tests.sh
    ```
 
-4. Additionally, before a release, run the suite on **Python 2.7 and 3.6**
-   (Docker containers), which CI does not cover.
+4. Additionally, before a release, run the suite on **every supported Python
+   version**, including the **2.7 and 3.6** that CI does not cover:
+
+   ```bash
+   ./run_tests_containers.sh
+   ```
 
 5. **Tag and push.** Tags are annotated and signed:
 

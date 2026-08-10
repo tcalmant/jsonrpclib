@@ -1,0 +1,261 @@
+name: Publish
+
+# Builds, signs and publishes a release of jsonrpclib-pelix.
+#
+# Pushing a signed tag is the only action needed to release: this workflow then
+# builds the artifacts, attests their provenance, uploads them to PyPI using
+# Trusted Publishing, generates the SBOM of what was actually built and creates
+# the GitHub release, with notes taken from docs/changelog.md.
+#
+# No PyPI token is stored anywhere: the upload is authenticated with a
+# short-lived OpenID Connect token minted by GitHub and exchanged with PyPI,
+# which checks it against the trusted publisher declared on the project.
+#
+# One-time setup required before the first real publish: declare this workflow
+# as a trusted publisher for the "jsonrpclib-pelix" project, on PyPI and (for
+# rehearsals) on TestPyPI. See https://docs.pypi.org/trusted-publishers/
+#
+# The workflow_dispatch entry publishes to TestPyPI instead, to rehearse a
+# release without creating a tag: it stops before the GitHub release.
+
+on:
+  push:
+    # The project tags releases with a "v"-prefixed version number ("v1.2.0").
+    tags: ["v[0-9]*"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Index to publish to
+        type: choice
+        options: [testpypi, pypi]
+        default: testpypi
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Check the declared version
+        # The version is repeated in pyproject.toml, setup.py and in every
+        # module, both as a __version_info__ tuple and as a ":version:"
+        # docstring field: this ensures the release does not ship a
+        # half-applied version bump. The tag carries a "v" prefix the declared
+        # version does not, so it is stripped. Outside of a tag, only the
+        # consistency of the tree is checked.
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$REF_TYPE" = "tag" ]; then
+            python .github/scripts/check_version.py "${REF_NAME#v}"
+          else
+            python .github/scripts/check_version.py
+          fi
+
+      - name: Build the distributions
+        run: uv build
+
+      - name: Check the distributions
+        # Ensures PyPI will accept the description rendered from README.md
+        run: uvx twine check --strict dist/*
+
+      - name: Store the distributions as an artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: jsonrpclib-dist
+          path: dist/
+          if-no-files-found: error
+
+  provenance:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      # Required to sign the provenance attestation with Sigstore
+      id-token: write
+      attestations: write
+      contents: read
+
+    steps:
+      - name: Get the distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: jsonrpclib-dist
+          path: dist/
+
+      - name: Attest the build provenance
+        # Consumers can then run:
+        #   gh attestation verify <file> --repo tcalmant/jsonrpclib
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+
+  sbom:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+
+      - name: Get the distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: jsonrpclib-dist
+          path: dist/
+
+      - name: Resolve the dependencies
+        # jsonrpclib-pelix has no runtime dependencies (the optional JSON
+        # backends are picked up if present, but are not declared), so the
+        # requirements list is empty: the SBOM describes the project itself and,
+        # below, the artifacts that were shipped.
+        run: printf '' > requirements-sbom.txt
+
+      - name: Generate the SBOM
+        run: |
+          for format in JSON XML; do
+            uvx --from cyclonedx-bom cyclonedx-py requirements requirements-sbom.txt \
+              --pyproject pyproject.toml \
+              --mc-type library \
+              --output-reproducible \
+              --of "$format" \
+              -o "jsonrpclib-sbom.cdx.$(echo "$format" | tr '[:upper:]' '[:lower:]')"
+          done
+
+      - name: Record the published artifacts in the SBOM
+        # The SBOM then describes the files that are actually shipped, with
+        # their digests, and not only the project metadata
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          python .github/scripts/sbom_artifacts.py \
+            --dist dist \
+            --json jsonrpclib-sbom.cdx.json \
+            --xml jsonrpclib-sbom.cdx.xml \
+            --base-url "https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/"
+
+      - name: Show a summary of the SBOM
+        run: |
+          python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import json
+
+          with open("jsonrpclib-sbom.cdx.json") as fp:
+              sbom = json.load(fp)
+
+          root = sbom["metadata"]["component"]
+          components = sbom.get("components", [])
+          print(f"## SBOM of {root['name']} {root.get('version', '')}")
+          print()
+          print(f"* CycloneDX specification: {sbom['specVersion']}")
+          print(f"* Components: {len(components)}")
+          print()
+          print("| Component | Version |")
+          print("| --------- | ------- |")
+          for component in sorted(components, key=lambda c: c["name"].lower()):
+              print(f"| {component['name']} | {component.get('version', '')} |")
+          EOF
+
+      - name: Store the SBOM as an artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: jsonrpclib-sbom
+          path: |
+            jsonrpclib-sbom.cdx.json
+            jsonrpclib-sbom.cdx.xml
+          if-no-files-found: error
+
+  publish:
+    needs: [build, provenance, sbom]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      # Required to get the OpenID Connect token exchanged with PyPI, and to
+      # sign the PEP 740 attestations. No password nor API token is used
+      id-token: write
+
+    environment:
+      name: ${{ inputs.target == 'testpypi' && 'testpypi' || 'pypi' }}
+      url: ${{ inputs.target == 'testpypi' && 'https://test.pypi.org/p/jsonrpclib-pelix' || 'https://pypi.org/p/jsonrpclib-pelix' }}
+
+    steps:
+      - name: Get the distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: jsonrpclib-dist
+          path: dist/
+
+      - name: Publish the distributions
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          repository-url: ${{ inputs.target == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
+          # PEP 740: PyPI verifies the attestation against the trusted publisher
+          # and shows it next to each file
+          attestations: true
+          print-hash: true
+
+  release:
+    needs: [build, sbom, publish]
+    # A release is only created for a tag: the TestPyPI rehearsal stops here
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Get the distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: jsonrpclib-dist
+          path: dist/
+
+      - name: Get the SBOM
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: jsonrpclib-sbom
+
+      - name: Prepare the release notes
+        # docs/changelog.md is the single source of truth for the release notes.
+        # The script also fails if the release is still marked as "Unreleased".
+        # The tag carries a "v" prefix the changelog headings do not.
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          python .github/scripts/release_notes.py "${TAG_NAME#v}" \
+            --tag "$TAG_NAME" \
+            --repository "${{ github.repository }}" \
+            --output release-notes.md
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG_NAME" \
+            --title "$TAG_NAME" \
+            --notes-file release-notes.md \
+            --verify-tag \
+            dist/* jsonrpclib-sbom.cdx.json jsonrpclib-sbom.cdx.xml

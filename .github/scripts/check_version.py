@@ -3,10 +3,10 @@
 """
 Checks that the version of the project is declared consistently everywhere.
 
-jsonrpclib declares its version in many places: ``pyproject.toml``, ``setup.py``
-and, in every module of ``jsonrpclib``, a ``__version_info__`` tuple and a
-``:version:`` docstring field. A release bumps a dozen files by hand, so a
-single missed file is easy: this script is the guard against it.
+jsonrpclib declares its version in many places: ``pyproject.toml`` and, in every
+module of ``jsonrpclib``, a ``__version_info__`` tuple and a ``:version:``
+docstring field. A release bumps a dozen files by hand, so a single missed file
+is easy: this script is the guard against it.
 
 Called without argument, it only checks the consistency of the tree. Called
 with a version (the release tag), it also checks that the tree declares that
@@ -72,7 +72,7 @@ PYPROJECT_VERSION_PATTERN = re.compile(
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 #: Files that carry the version but are not walked as package modules
-EXTRA_FILES = ("setup.py",)
+EXTRA_FILES = ()
 
 
 def get_project_version():
