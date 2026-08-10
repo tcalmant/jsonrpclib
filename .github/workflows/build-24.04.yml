@@ -1,4 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# This workflow lints the code and runs the tests on a range of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 name: CI Build
@@ -12,7 +12,34 @@ on:
     branches: [ "main" ]
 
 jobs:
+  lint:
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.13"
+    - name: Install the linters
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install ruff black
+    - name: Lint with ruff
+      # A Python 2.7-safe rule set (the pyupgrade rewrites are excluded);
+      # configured in pyproject.toml
+      run: ruff check .
+    - name: Check the formatting with black
+      run: black --check .
+    - name: Check the declared version
+      # The version is repeated in pyproject.toml and in every module, both as a
+      # __version_info__ tuple and as a ':version:' docstring field: catch a
+      # half-applied bump here rather than when publishing.
+      run: python .github/scripts/check_version.py
+
   build:
+    needs: lint
     timeout-minutes: 10
     runs-on: ubuntu-24.04
     strategy:
@@ -29,18 +56,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Check the declared version
-      # The version is repeated in pyproject.toml, setup.py and in every module,
-      # both as a __version_info__ tuple and as a ':version:' docstring field:
-      # catch a half-applied bump here rather than when publishing.
-      run: python .github/scripts/check_version.py
+        python -m pip install pytest
     - name: Test
       run: |
         ./run_tests.sh

@@ -99,9 +99,7 @@ def update_json(path, artifacts, base_url):
                 "type": "distribution",
                 "url": "{0}{1}".format(base_url, artifact["name"]),
                 "comment": "published artifact: {0}".format(artifact["name"]),
-                "hashes": [
-                    {"alg": "SHA-256", "content": artifact["digest"]}
-                ],
+                "hashes": [{"alg": "SHA-256", "content": artifact["digest"]}],
             }
         )
 
@@ -128,7 +126,9 @@ def update_xml(path, artifacts, base_url):
     if component is None:
         raise ValueError("{0}: no metadata/component element".format(path))
 
-    references = component.find("{{{0}}}externalReferences".format(CYCLONEDX_NS))
+    references = component.find(
+        "{{{0}}}externalReferences".format(CYCLONEDX_NS)
+    )
     if references is None:
         # The schema orders externalReferences after licenses, which
         # cyclonedx-py always emits
@@ -194,7 +194,10 @@ def main():
         if path.is_file() and path.name.endswith(DIST_SUFFIXES)
     ]
     if not files:
-        print("::error::No distribution found in {0}".format(dist), file=sys.stderr)
+        print(
+            "::error::No distribution found in {0}".format(dist),
+            file=sys.stderr,
+        )
         return 1
 
     artifacts = describe(files)
