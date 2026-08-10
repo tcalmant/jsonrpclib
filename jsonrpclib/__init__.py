@@ -25,19 +25,24 @@ Aliases to ease access to jsonrpclib classes
     limitations under the License.
 """
 
-# Easy access to utility methods and classes
-from jsonrpclib.jsonrpc import Server, ServerProxy  # noqa: F401
-from jsonrpclib.jsonrpc import (  # noqa: F401
-    MultiCall,
-    Fault,
-    ProtocolError,
-    AppError,
-    TransportError,
-)
-from jsonrpclib.jsonrpc import loads, dumps, load, dump  # noqa: F401
-from jsonrpclib.jsonrpc import jloads, jdumps  # noqa: F401
+# Easy access to utility methods and classes (re-exported on purpose)
 import jsonrpclib.history as history  # noqa: F401
 import jsonrpclib.utils as utils  # noqa: F401
+from jsonrpclib.jsonrpc import (  # noqa: F401
+    AppError,
+    Fault,
+    MultiCall,
+    ProtocolError,
+    Server,
+    ServerProxy,
+    TransportError,
+    dump,
+    dumps,
+    jdumps,
+    jloads,
+    load,
+    loads,
+)
 
 # ------------------------------------------------------------------------------
 

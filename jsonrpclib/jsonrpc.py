@@ -69,18 +69,18 @@ try:
     # pylint: disable=F0401,E0611
     from http.client import HTTPConnection
     from urllib.parse import urlparse
-    from xmlrpc.client import Transport as XMLTransport
     from xmlrpc.client import SafeTransport as XMLSafeTransport
     from xmlrpc.client import ServerProxy as XMLServerProxy
+    from xmlrpc.client import Transport as XMLTransport
     from xmlrpc.client import _Method as XML_Method
 except ImportError:
     # Python 2
     # pylint: disable=F0401,E0611
     from httplib import HTTPConnection  # type: ignore
     from urlparse import urlparse  # type: ignore
-    from xmlrpclib import Transport as XMLTransport  # type: ignore
     from xmlrpclib import SafeTransport as XMLSafeTransport  # type: ignore
     from xmlrpclib import ServerProxy as XMLServerProxy  # type: ignore
+    from xmlrpclib import Transport as XMLTransport  # type: ignore
     from xmlrpclib import _Method as XML_Method  # type: ignore
 
 try:
@@ -93,8 +93,8 @@ except ImportError:
 
 # Library includes
 import jsonrpclib.config
-import jsonrpclib.jsonlib as jsonlib
 import jsonrpclib.jsonclass as jsonclass
+import jsonrpclib.jsonlib as jsonlib
 import jsonrpclib.utils as utils
 
 # ------------------------------------------------------------------------------
@@ -1428,7 +1428,7 @@ def isbatch(request):
         # One of the requests is not a dictionary, i.e. a JSON Object
         # therefore it is not a valid JSON-RPC request
         return False
-    elif "jsonrpc" not in request[0].keys():
+    elif "jsonrpc" not in request[0]:
         # No "jsonrpc" version in the JSON object: not a request
         return False
 
@@ -1438,11 +1438,8 @@ def isbatch(request):
         # Bad version of JSON-RPC
         raise ProtocolError('"jsonrpc" key must be a float(able) value.')
 
-    if version < 2:
-        # Batch call were not supported before JSON-RPC 2.0
-        return False
-
-    return True
+    # Batch calls were not supported before JSON-RPC 2.0
+    return version >= 2
 
 
 def isnotification(request):
@@ -1456,8 +1453,5 @@ def isnotification(request):
         # 2.0 notification
         return True
 
-    if request["id"] is None:
-        # 1.0 notification
-        return True
-
-    return False
+    # 1.0 notification: a null request id
+    return request["id"] is None

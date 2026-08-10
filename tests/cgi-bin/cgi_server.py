@@ -10,7 +10,9 @@ current_dir = os.path.dirname(__file__)
 root_dir = os.path.dirname(os.path.dirname(current_dir))
 sys.path.insert(0, root_dir)
 
-from jsonrpclib.SimpleJSONRPCServer import CGIJSONRPCRequestHandler  # noqa: E402
+from jsonrpclib.SimpleJSONRPCServer import (  # noqa: E402
+    CGIJSONRPCRequestHandler,
+)
 
 
 def add(a, b):

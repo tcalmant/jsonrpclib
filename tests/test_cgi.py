@@ -12,16 +12,15 @@ from __future__ import print_function
 import os
 import random
 import socket
-import threading
 import sys
+import threading
 import unittest
-
 
 if sys.version_info >= (3, 15):
     raise unittest.SkipTest("CGI support has been removed in Python 3.15")
 
 try:
-    from http.server import HTTPServer, CGIHTTPRequestHandler
+    from http.server import CGIHTTPRequestHandler, HTTPServer
 except ImportError:
     from BaseHTTPServer import HTTPServer  # type: ignore
     from CGIHTTPServer import CGIHTTPRequestHandler  # type: ignore

@@ -216,8 +216,7 @@ class TestCompatibility(unittest.TestCase):
         requests = json.loads(json_requests)
         responses = self.client._run_request(json_requests)
 
-        verify_requests = json.loads(
-            """[
+        verify_requests = json.loads("""[
             {"jsonrpc": "2.0", "method": "sum", "params": [1,2,4], "id": "1"},
             {"jsonrpc": "2.0", "method": "notify_hello", "params": [7]},
             {"jsonrpc": "2.0", "method": "subtract",
@@ -226,12 +225,10 @@ class TestCompatibility(unittest.TestCase):
             {"jsonrpc": "2.0", "method": "foo.get",
              "params": {"name": "myself"}, "id": "5"},
             {"jsonrpc": "2.0", "method": "get_data", "id": "9"}
-        ]"""
-        )
+        ]""")
 
         # Thankfully, these are in order so testing is pretty simple.
-        verify_responses = json.loads(
-            """[
+        verify_responses = json.loads("""[
             {"jsonrpc": "2.0", "result": 7, "id": "1"},
             {"jsonrpc": "2.0", "result": 19, "id": "2"},
             {"jsonrpc": "2.0",
@@ -241,8 +238,7 @@ class TestCompatibility(unittest.TestCase):
              "error": {"code": -32601, "message": "Method not found."},
              "id": "5"},
             {"jsonrpc": "2.0", "result": ["hello", 5], "id": "9"}
-        ]"""
-        )
+        ]""")
 
         self.assertTrue(len(requests) == len(verify_requests))
         self.assertTrue(len(responses) == len(verify_responses))

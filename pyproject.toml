@@ -60,9 +60,25 @@ universal = true
 
 [tool.black]
 line-length = 80
+# The code base still supports Python 2.7, but Black cannot target it; py37 is
+# the conservative floor. Black only reformats, so it never introduces syntax
+# that would break the 2.7 interpreter.
+target-version = ["py37"]
 
 [tool.ruff]
 line-length = 80
 
 [tool.ruff.lint]
-extend-select = ["I"]
+# Explicit, Python-2.7-safe rule set. Keep pyflakes (F), pycodestyle (E),
+# isort (I) and flake8-simplify (SIM). The pyupgrade (UP) family is
+# deliberately NOT selected: its rewrites (f-strings, dropping `object` bases,
+# removing __future__/py2 import shims) break Python 2.7, which the 1.x line
+# still supports. That cleanup belongs to the 2.x line.
+select = ["E", "F", "I", "SIM"]
+ignore = [
+    # contextlib.suppress() does not exist before Python 3.4
+    "SIM105",
+    # Combining nested `with` statements can force the parenthesised
+    # context-manager form, which is Python 3.10+ syntax and breaks 2.7
+    "SIM117",
+]
