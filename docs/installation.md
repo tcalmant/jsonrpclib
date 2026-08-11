@@ -2,11 +2,17 @@
 
 ## Requirements
 
-It supports `orjson`, `ujson`, `cjson` and `simplejson`, and looks for the parsers
-in that order (searching first for `orjson`, `ujson`, `cjson`, `simplejson` and
-finally for the built-in `json`).
-One of these must be installed to use this library, although if you have a
-standard distribution of Python 2.7+ or 3.x, you should already have one.
+This library runs on Python 2.7 and Python 3.6+.
+The test suite is run on every supported version (2.7, then 3.6 to 3.15) in
+GitHub CI, using the matching `python:<version>` container.
+
+No third-party package is required: the built-in `json` module is used by
+default.
+The library can also use `orjson`, `ujson`, `simplejson` and `cjson` if they
+are installed, and looks for the parsers in that order (`orjson`, `ujson`,
+`simplejson`, `cjson`, then the built-in `json`).
+Each candidate is validated with a round-trip before being used, so a parser
+which is installed but broken is skipped.
 Keep in mind that `orjson` is supposed to be the quickest, so for full-on
 optimization you may want to pick it up.
 
@@ -33,10 +39,13 @@ at <https://github.com/tcalmant/jsonrpclib> and manually install it
 with the following commands:
 
 ```console
-git clone git://github.com/tcalmant/jsonrpclib.git
+git clone https://github.com/tcalmant/jsonrpclib.git
 cd jsonrpclib
-python setup.py install
+pip install .
 ```
+
+On Python 2.7, where `pip` might be too old to handle the project metadata, use
+`python setup.py install` instead.
 
 ## Tests
 
@@ -49,11 +58,10 @@ This is the script executed by GitHub CI and in Docker containers before release
 The script can also be executed with `uv` to use a virtual environment to run tests:
 `uv run ./run_tests.sh`.
 
-You can also run tests for your setup using `unittest`, `nosetest` or `pytest`:
+You can also run tests for your setup using `unittest` or `pytest`:
 
 ```console
 python -m unittest discover tests
 python3 -m unittest discover tests
-nosetests tests
 pytest tests
 ```

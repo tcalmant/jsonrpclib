@@ -65,11 +65,17 @@ A `SimpleJSONRPCServer` class has been added. It is intended to emulate the
 
 ## Requirements
 
-This library supports `orjson`, `ujson`, `cjson` and `simplejson`, and looks
-for the parsers in that order (searching first for `orjson`, `ujson`, `cjson`,
-`simplejson` and finally for the *built-in* `json`).
-One of these must be installed to use this library, although if you have a
-standard distribution of 2.7+, you should already have one.
+This library runs on Python 2.7 and Python 3.6+.
+The test suite is run on every supported version (2.7, then 3.6 to 3.15) in
+GitHub CI, using the matching `python:<version>` container.
+
+No third-party package is required: the *built-in* `json` module is used by
+default.
+The library can also use `orjson`, `ujson`, `simplejson` and `cjson` if they
+are installed, and looks for the parsers in that order (`orjson`, `ujson`,
+`simplejson`, `cjson`, then the *built-in* `json`).
+Each candidate is validated with a round-trip before being used, so a parser
+which is installed but broken is skipped.
 Keep in mind that `orjson` is supposed to be the quickest, I believe, so if you
 are going for full-on optimization you may want to pick it up.
 
@@ -91,10 +97,13 @@ Alternatively, you can download the source from the GitHub repository at
 install it with the following commands:
 
 ```
-git clone git://github.com/tcalmant/jsonrpclib.git
+git clone https://github.com/tcalmant/jsonrpclib.git
 cd jsonrpclib
-python setup.py install
+pip install .
 ```
+
+On Python 2.7, where `pip` might be too old to handle the project metadata, use
+`python setup.py install` instead.
 
 ## A note on logging
 
@@ -132,7 +141,7 @@ server.register_function(lambda x: x, 'ping')
 server.serve_forever()
 ```
 
-To start protect the server with SSL, use the following snippet:
+To protect the server with SSL, use the following snippet:
 
 ```python
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
@@ -140,14 +149,32 @@ import ssl
 
 # Setup the SSL socket
 server = SimpleJSONRPCServer(('localhost', 8080), bind_and_activate=False)
-server.socket = ssl.wrap_socket(
-  server.socket, certfile='server.pem', server_side=True)
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+context.load_cert_chain(certfile='server.pem')
+server.socket = context.wrap_socket(server.socket, server_side=True)
 server.server_bind()
 server.server_activate()
 
 # ... register functions
 # Start the server
 server.serve_forever()
+```
+
+**Note:** `ssl.wrap_socket()`, which this snippet used to rely on, was removed
+in Python 3.12.
+On Python 2.7, use `ssl.PROTOCOL_TLSv1_2` instead of `ssl.PROTOCOL_TLS_SERVER`,
+which doesn't exist there.
+
+Clients then connect using an `https://` URL. A custom SSL context can be given
+to `ServerProxy` with the `context` argument, *e.g.* to trust a self-signed
+certificate:
+
+```python
+import jsonrpclib
+import ssl
+
+context = ssl.create_default_context(cafile='server-cert.pem')
+client = jsonrpclib.ServerProxy('https://localhost:8080', context=context)
 ```
 
 ### Maximum request size
@@ -315,7 +342,8 @@ This is (obviously) taken from a console session.
 >>> batch._notify.add(4, 30)
 >>> results = batch()
 >>> for result in results:
->>> ... print(result)
+...     print(result)
+...
 11
 {'key': 'value'}
 # Note that there are only two responses -- this is according to spec.
@@ -458,11 +486,17 @@ class TestSerial(object):
 >>> import jsonrpclib
 >>> import test_obj
 
+# Both ends must declare the classes they accept (see below)
+>>> config = jsonrpclib.config.Config()
+>>> config.classes.add(test_obj.TestObj)
+>>> config.classes.add(test_obj.TestSerial)
+
 # History is used only to print the serialized form of beans
 >>> history = jsonrpclib.history.History()
 >>> testobj1 = test_obj.TestObj()
 >>> testobj2 = test_obj.TestSerial()
->>> server = jsonrpclib.Server('http://localhost:8080', history=history)
+>>> server = jsonrpclib.Server(
+...   'http://localhost:8080', config=config, history=history)
 
 # The 'ping' just returns whatever is sent
 >>> ping1 = server.ping(testobj1)
@@ -542,12 +576,11 @@ This is the script executed by GitHub CI and in Docker containers before release
 The script can also be executed with `uv` to use a virtual environment to run tests:
 `uv run ./run_tests.sh`.
 
-You can also run tests for your setup using `unittest`, `nosetest` or `pytest`:
+You can also run tests for your setup using `unittest` or `pytest`:
 
 ```console
 python -m unittest discover tests
 python3 -m unittest discover tests
-nosetests tests
 pytest tests
 ```
 

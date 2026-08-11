@@ -27,6 +27,24 @@
   call raises: the additional headers are now always removed from the transport
   when leaving the `with` block.
 
+### Documentation
+
+- The SSL server snippet no longer uses `ssl.wrap_socket()`, which was removed
+  in Python 3.12: it now uses an `ssl.SSLContext`. The client side of TLS (the
+  `context` argument of `ServerProxy`) is documented as well.
+- The class translation examples now declare their classes in the registry, as
+  required since this release.
+- Fixed the description of the JSON parser lookup order (`orjson`, `ujson`,
+  `simplejson`, `cjson`, then the built-in `json`) and the claim that one of
+  the third-party parsers had to be installed: the built-in `json` module is
+  enough. The supported and tested Python versions (2.7, then 3.6 to 3.15) are
+  now stated explicitly.
+- Fixed the source installation instructions: the `git://` protocol has been
+  disabled by GitHub, and `pip install .` replaces `python setup.py install`
+  outside of Python 2.7. Dropped the mentions of `nosetests`.
+- The class translation page no longer claims the feature is turned off by
+  default, which contradicted both the code and the rest of the page.
+
 ### Project
 
 - Distributions are now built as a universal `py2.py3-none-any` wheel again, so

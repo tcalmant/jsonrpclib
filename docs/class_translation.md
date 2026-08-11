@@ -1,7 +1,7 @@
 # Class Translation
 
-The library supports an *"automatic"* class translation process, although it
-is turned off by default.
+The library supports an *"automatic"* class translation process, which is
+turned on by default (`use_jsonclass`).
 This can be devastatingly slow if improperly used, so the following is just a
 short list of things to keep in mind when using it.
 
@@ -45,12 +45,17 @@ class TestSerial(object):
 >>> import jsonrpclib
 >>> import test_obj
 
+# Both ends must declare the classes they accept (see below)
+>>> config = jsonrpclib.config.Config()
+>>> config.classes.add(test_obj.TestObj)
+>>> config.classes.add(test_obj.TestSerial)
+
 # History is used only to print the serialized form of beans
 >>> history = jsonrpclib.history.History()
 >>> testobj1 = test_obj.TestObj()
 >>> testobj2 = test_obj.TestSerial()
 >>> server = jsonrpclib.Server(
-...     'http://localhost:8080', history=history)
+...     'http://localhost:8080', config=config, history=history)
 
 # The 'ping' just returns whatever is sent
 >>> ping1 = server.ping(testobj1)
