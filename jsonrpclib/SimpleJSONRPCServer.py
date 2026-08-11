@@ -405,10 +405,18 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
                     # Instance has a custom dispatcher
                     return getattr(self.instance, "_dispatch")(method, params)
                 except AttributeError:
-                    # Resolve the method name in the instance
+                    # Resolve the method name in the instance.
+                    # Dotted names let the caller walk the attributes of the
+                    # registered instance, which can reach any callable it
+                    # holds a reference to: keep it opt-in, as
+                    # SimpleXMLRPCServer does. The attribute only exists once
+                    # register_instance() has been called, hence the default.
+                    allow_dotted_names = getattr(
+                        self, "allow_dotted_names", False
+                    )
                     try:
                         func = resolve_dotted_attribute(
-                            self.instance, method, True
+                            self.instance, method, allow_dotted_names
                         )
                     except AttributeError:
                         # Unknown method

@@ -21,6 +21,20 @@
   is always accepted, as a value type the library serializes itself. Setting
   `Config(allow_dynamic_classes=True)` restores the previous behaviour.
 
+- `register_instance()` no longer accepts dotted method names by default. The
+  `allow_dotted_names` argument of `register_instance()` was ignored: method
+  names were always resolved by walking the attributes of the registered
+  instance, so a client could reach any object it holds a reference to — and
+  therefore any callable on it. `SimpleXMLRPCServer`, which this library
+  mirrors, has always required this to be requested explicitly.
+
+  **This changes the default behaviour:** a server registering an instance now
+  answers `-32601` (method not supported) to `a.b.c` style names. If you rely
+  on them, and the registered instance holds nothing a caller should not reach,
+  ask for them as you would with `xmlrpclib`:
+  `server.register_instance(obj, allow_dotted_names=True)`. Attributes whose
+  name starts with `_` remain unreachable either way.
+
 ### Fixed
 
 - `ServerProxy._additional_headers` no longer leaks headers when the wrapped

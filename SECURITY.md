@@ -111,7 +111,17 @@ exploitation technique against them is still worth reporting.
   classes named by the peer are not imported anymore, unless
   `Config(allow_dynamic_classes=True)` is set. Keep that flag off across a trust
   boundary, keep the registry as small as possible, and only enable class
-  translation between endpoints you trust.
+  translation between endpoints you trust. Note that the registry restricts
+  *which* classes may be instantiated, not what the peer may do to them: the
+  constructor arguments and the attributes of the rebuilt object both come from
+  the payload, so a registered class must tolerate arbitrary input.
+- **Dotted method names reach the attributes of a registered instance.**
+  Since 1.2, `register_instance()` refuses `a.b.c` style method names unless
+  `allow_dotted_names=True` is passed, as in `SimpleXMLRPCServer`. Enabling it
+  lets a client walk the public attributes of the registered object and call
+  anything it reaches, which is a remote-code-execution surface if that object
+  holds a reference to a module or to a powerful helper. Only enable it for
+  objects whose whole public attribute graph is safe to expose.
 - **The servers are unauthenticated.** `SimpleJSONRPCServer` and
   `PooledJSONRPCServer` perform no authentication or authorization: any client
   that can reach the port can invoke any registered method. Expose them only on
