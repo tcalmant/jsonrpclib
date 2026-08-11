@@ -207,10 +207,11 @@ class ErrorDetailsTests(unittest.TestCase):
         self.assertEqual(-32602, code)
         self.assertIn("Invalid parameters", message)
 
-    def test_no_content_length(self):
+    def test_request_handler_error(self):
         """
-        Tests that a request without a Content-Length doesn't disclose the
-        server paths (it is answered by the do_POST error handler)
+        Tests that an error raised while handling the request itself doesn't
+        disclose the server paths (it is answered by the do_POST error handler,
+        here with a body which is not valid UTF-8)
         """
         self.make_client()
         port = self.server.socket.getsockname()[1]
@@ -221,8 +222,10 @@ class ErrorDetailsTests(unittest.TestCase):
             sock.sendall(
                 to_bytes(
                     "POST / HTTP/1.1\r\nHost: {0}\r\n"
-                    "Content-Type: application/json-rpc\r\n\r\n".format(HOST)
+                    "Content-Type: application/json-rpc\r\n"
+                    "Content-Length: 4\r\n\r\n".format(HOST)
                 )
+                + b"\xff\xfe\xff\xfe"
             )
 
             raw = b""
@@ -234,13 +237,14 @@ class ErrorDetailsTests(unittest.TestCase):
         finally:
             sock.close()
 
-        # Check the body only: the status code of that case is expected to
-        # become a 411 later on, the point here is what the body contains
+        # The error is reported, without describing the server
         body = raw.decode("utf-8", "replace").split("\r\n\r\n", 1)[-1]
-        self.assertIn("Server error", body)
+        self.assertIsNotNone(
+            REF_PATTERN.search(body), "No error reference in {0}".format(body)
+        )
         self.assertNotIn(".py", body)
         self.assertNotIn("Traceback", body)
-        self.assertNotIn("line ", body)
+        self.assertNotIn("UnicodeDecodeError", body)
 
 
 if __name__ == "__main__":

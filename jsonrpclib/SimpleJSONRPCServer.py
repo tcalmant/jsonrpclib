@@ -501,6 +501,31 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
     # adjust the limit for a specific server.
     max_request_size = MAX_REQUEST_SIZE
 
+    def _send_fault_response(self, status, message, config):
+        """
+        Sends a JSON-RPC error as the body of an HTTP error response and closes
+        the connection.
+
+        Used for the errors detected before reading the request body: the body
+        stays unread, so the connection can't be reused.
+
+        :param status: HTTP status code
+        :param message: Description of the error, sent to the client
+        :param config: A JSONRPClib Config instance
+        """
+        fault = Fault(-32600, message, config=config)
+        response = utils.to_bytes(fault.response())
+
+        self.send_response(status)
+        self.send_header("Content-type", config.content_type)
+        self.send_header("Content-length", str(len(response)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.write(response)
+
+        # Python 2 doesn't look at the Connection header we just sent
+        self.close_connection = True
+
     def do_POST(self):
         """
         Handles POST requests
@@ -512,27 +537,34 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
         # Retrieve the configuration
         config = getattr(self.server, "json_config", jsonrpclib.config.DEFAULT)
 
+        # Check the framing of the request before reading anything from it.
+        # Note that the body of a request without a Content-Length can't be
+        # read: the underlying handler doesn't support chunked bodies.
+        raw_length = self.headers.get("content-length", None)
+        if raw_length is None:
+            self._send_fault_response(
+                411, "Content-Length header is required.", config
+            )
+            return
+
+        try:
+            size_remaining = int(raw_length)
+            if size_remaining < 0:
+                raise ValueError("Negative Content-Length")
+        except ValueError:
+            self._send_fault_response(
+                400, "Invalid Content-Length header.", config
+            )
+            return
+
+        # Refuse requests exceeding the size limit before reading the body
+        if self.max_request_size and size_remaining > self.max_request_size:
+            self._send_fault_response(413, "Request too large.", config)
+            return
+
         try:
             # Read the request body
             max_chunk_size = 10 * 1024 * 1024
-            size_remaining = int(self.headers["content-length"])
-
-            # Refuse requests exceeding the size limit before reading the body
-            if self.max_request_size and size_remaining > self.max_request_size:
-                fault = Fault(
-                    -32600,
-                    "Request too large.",
-                    config=config,
-                )
-                response = utils.to_bytes(fault.response())
-                self.send_response(413)
-                self.send_header("Content-type", config.content_type)
-                self.send_header("Content-length", str(len(response)))
-                self.send_header("Connection", "close")
-                self.end_headers()
-                self.wfile.write(response)
-                return
-
             chunks = []
             while size_remaining:
                 chunk_size = min(size_remaining, max_chunk_size)

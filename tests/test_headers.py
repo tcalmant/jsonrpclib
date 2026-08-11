@@ -27,7 +27,7 @@ from jsonrpclib.SimpleJSONRPCServer import (
     SimpleJSONRPCRequestHandler,
     SimpleJSONRPCServer,
 )
-from jsonrpclib.utils import from_bytes
+from jsonrpclib.utils import from_bytes, to_bytes
 
 # Tests utilities
 from tests.utilities import UtilityServer
@@ -331,6 +331,61 @@ class HeadersTests(unittest.TestCase):
         self.assertEqual(headers1["x-level-1"], "1")
         self.assertTrue("x-level-2" in headers2)
         self.assertEqual(headers2["x-level-2"], "2")
+
+    def raw_request(self, headers, body=b""):
+        """
+        Sends a raw HTTP request to the test server
+
+        :param headers: The headers of the request, as a string
+        :param body: The raw body of the request
+        :return: The raw answer of the server
+        """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        try:
+            sock.connect((HOST, self.port))
+            sock.sendall(
+                to_bytes(
+                    "POST / HTTP/1.0\r\nHost: {0}\r\n{1}\r\n".format(
+                        HOST, headers
+                    )
+                )
+                + body
+            )
+
+            response = b""
+            while True:
+                chunk = sock.recv(4096)
+                if not chunk:
+                    break
+                response += chunk
+        finally:
+            sock.close()
+
+        return response
+
+    def test_missing_content_length(self):
+        """
+        Tests that a request without a Content-Length is rejected with an
+        HTTP 411, as its body can't be read
+        """
+        response = self.raw_request("Content-Type: application/json-rpc\r\n")
+        self.assertIn(b"411", response.split(b"\r\n")[0])
+
+    def test_invalid_content_length(self):
+        """
+        Tests that a request with an unusable Content-Length is rejected with
+        an HTTP 400
+        """
+        for length in ("abc", "-5", ""):
+            response = self.raw_request(
+                "Content-Length: {0}\r\n".format(length)
+            )
+            self.assertIn(
+                b"400",
+                response.split(b"\r\n")[0],
+                "Content-Length '{0}' was not refused".format(length),
+            )
 
     def test_content_length_too_large(self):
         """

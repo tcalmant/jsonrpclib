@@ -56,6 +56,17 @@
   call raises: the additional headers are now always removed from the transport
   when leaving the `with` block.
 
+- Requests are now checked for a usable framing before anything is read from
+  them. A request without a `Content-Length` is answered with an `HTTP 411`
+  (`Length Required`) and one with an unusable value with an `HTTP 400`
+  (`Bad Request`), where both used to raise inside the request handler and be
+  reported as an `HTTP 500` describing the server. Oversized requests are still
+  refused with an `HTTP 413` before the body is read.
+
+  Note that `max_request_size` is compared to the `Content-Length` header: it
+  bounds what is read from the socket, not what the body expands to once
+  decoded.
+
 ### Documentation
 
 - The SSL server snippet no longer uses `ssl.wrap_socket()`, which was removed

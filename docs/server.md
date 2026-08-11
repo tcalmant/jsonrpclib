@@ -90,7 +90,18 @@ server = SimpleJSONRPCServer(
 ```
 
 When the limit is exceeded, the server responds with `HTTP 413`
-(`Request Entity Too Large`).
+(`Request Entity Too Large`) before reading the body.
+
+```{note}
+The limit is checked against the `Content-Length` header, so it bounds what is
+read from the socket, **not** what the body expands to: a `gzip`-encoded
+request is measured while still compressed.
+```
+
+Requests are also required to be framed, as their body cannot be read
+otherwise: a request without a `Content-Length` is answered with `HTTP 411`
+(`Length Required`), and one with an unusable value (not a number, or a
+negative one) with `HTTP 400` (`Bad Request`).
 
 ## A note on logging
 
