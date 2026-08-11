@@ -1329,7 +1329,7 @@ def load(data, config=jsonrpclib.config.DEFAULT):
     # { 'jsonrpc':'2.0', 'error': fault.error(), id: None }
     if config.use_jsonclass:
         # Convert beans
-        data = jsonclass.load(data, config.classes)
+        data = jsonclass.load(data, config.classes, config)
 
     return data
 

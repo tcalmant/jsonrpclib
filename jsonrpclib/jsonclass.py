@@ -52,6 +52,21 @@ SUPPORTED_TYPES = (
 # Regex of invalid module characters
 INVALID_MODULE_CHARS = r"[^a-zA-Z0-9\_\.]"
 
+# Classes which are always accepted by load(), whatever the registry and the
+# allow_dynamic_classes flag contain: harmless standard value types which dump()
+# handles specially and which load() must therefore be able to rebuild.
+# Extend the accepted classes with the registry (config.classes), not this
+# dictionary.
+SAFE_CLASSES = {}
+
+try:
+    import decimal
+
+    SAFE_CLASSES["decimal.Decimal"] = decimal.Decimal
+except ImportError:
+    # Decimal was introduced in Python 2.4
+    pass
+
 # ------------------------------------------------------------------------------
 
 
@@ -227,15 +242,89 @@ def dump(
 # ------------------------------------------------------------------------------
 
 
-def load(obj, classes=None):
+def _load_class(name, classes, config):
+    """
+    Finds the class to instantiate for the given __jsonclass__ name.
+
+    The registered classes are looked for first, then the always-accepted ones
+    (see SAFE_CLASSES). The class is imported only if the configuration
+    explicitly allows dynamic classes.
+
+    :param name: The (cleaned) name of the class, as given by the peer
+    :param classes: A {name: class} dictionary of accepted classes
+    :param config: A JSONRPClib Config instance
+    :return: The class to instantiate
+    :raise TranslationError: The class is not accepted or can't be found
+    """
+    name_parts = name.split(".")
+
+    # ... a registered class (by full name, then by short name)
+    if classes:
+        try:
+            return classes[name]
+        except KeyError:
+            pass
+
+        try:
+            return classes[name_parts[-1]]
+        except KeyError:
+            pass
+
+    # ... a class we always accept
+    try:
+        return SAFE_CLASSES[name]
+    except KeyError:
+        pass
+
+    if not config.allow_dynamic_classes:
+        # Refuse to import a class the caller didn't declare
+        raise TranslationError(
+            "Class {0} is not registered: it won't be imported. Add it to the "
+            "classes registry (config.classes.add()) or, if the peer is "
+            "trusted, set Config(allow_dynamic_classes=True).".format(name)
+        )
+
+    # ... a dynamically imported class
+    class_name = name_parts.pop()
+    module_tree = ".".join(name_parts)
+    if not module_tree:
+        raise TranslationError(
+            "No module name given to import class {0}.".format(class_name)
+        )
+
+    try:
+        # Use fromlist to load the module itself, not the package
+        temp_module = __import__(module_tree, fromlist=[class_name])
+    except ImportError:
+        raise TranslationError(
+            "Could not import {0} from module {1}.".format(
+                class_name, module_tree
+            )
+        )
+
+    try:
+        return getattr(temp_module, class_name)
+    except AttributeError:
+        raise TranslationError(
+            "Unknown class {0}.{1}.".format(module_tree, class_name)
+        )
+
+
+def load(obj, classes=None, config=jsonrpclib.config.DEFAULT):
     """
     If 'obj' is a dictionary containing a __jsonclass__ entry, converts the
     dictionary item into a bean of this class.
 
     :param obj: An object from a JSON-RPC dictionary
-    :param classes: A custom {name: class} dictionary
+    :param classes: A custom {name: class} dictionary (defaults to the one of
+                    the given configuration)
+    :param config: A JSONRPClib Config instance
     :return: The loaded object
     """
+    # Normalize arguments
+    if classes is None:
+        classes = config.classes
+
     # Primitive
     if isinstance(obj, utils.PRIMITIVE_TYPES):
         return obj
@@ -243,11 +332,11 @@ def load(obj, classes=None):
     # List, set or tuple
     elif isinstance(obj, utils.ITERABLE_TYPES):
         # This comes from a JSON parser, so it can only be a list...
-        return [load(entry, classes) for entry in obj]
+        return [load(entry, classes, config) for entry in obj]
 
     # Otherwise, it's a dict type
     elif "__jsonclass__" not in obj:
-        return {key: load(value, classes) for key, value in obj.items()}
+        return {key: load(value, classes, config) for key, value in obj.items()}
 
     # It's a dictionary, and it has a __jsonclass__
     orig_module_name = obj["__jsonclass__"][0]
@@ -264,52 +353,7 @@ def load(obj, classes=None):
         )
 
     # Load the class
-    json_module_parts = json_module_clean.split(".")
-    if classes and len(json_module_parts) == 1:
-        # Local class name -- probably means it won't work
-        try:
-            json_class = classes[json_module_parts[0]]
-        except KeyError:
-            raise TranslationError(
-                "Unknown class or module {0}.".format(json_module_parts[0])
-            )
-    elif classes:
-        # A classes registry is provided: refuse dynamic imports to prevent
-        # arbitrary deserialization. Check full name first, then short name.
-        json_class = classes.get(json_module_clean)
-        if json_class is None:
-            json_class = classes.get(json_module_parts[-1])
-        if json_class is None:
-            raise TranslationError(
-                "Class {0} is not registered. Dynamic class loading is "
-                "disabled when a class registry is provided.".format(
-                    orig_module_name
-                )
-            )
-    else:
-        # No classes registry: allow dynamic import for backward compatibility
-        json_class_name = json_module_parts.pop()
-        json_module_tree = ".".join(json_module_parts)
-        try:
-            # Use fromlist to load the module itself, not the package
-            temp_module = __import__(
-                json_module_tree, fromlist=[json_class_name]
-            )
-        except ImportError:
-            raise TranslationError(
-                "Could not import {0} from module {1}.".format(
-                    json_class_name, json_module_tree
-                )
-            )
-
-        try:
-            json_class = getattr(temp_module, json_class_name)
-        except AttributeError:
-            raise TranslationError(
-                "Unknown class {0}.{1}.".format(
-                    json_module_tree, json_class_name
-                )
-            )
+    json_class = _load_class(json_module_clean, classes, config)
 
     # Create the object
     if isinstance(params, utils.ListType):
@@ -339,7 +383,7 @@ def load(obj, classes=None):
 
     for key, value in obj.items():
         # Recursive loading
-        setattr(new_obj, key, load(value, classes))
+        setattr(new_obj, key, load(value, classes, config))
 
     # Restore the class information for further usage
     obj["__jsonclass__"] = raw_jsonclass
