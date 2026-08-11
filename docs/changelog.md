@@ -2,7 +2,7 @@
 
 ## 1.2
 
-:Release Date: Unreleased
+:Release Date: 2026-08-11
 
 ### Security
 
