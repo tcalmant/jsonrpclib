@@ -56,6 +56,18 @@
   call raises: the additional headers are now always removed from the transport
   when leaving the `with` block.
 
+- Requests with a `Content-Encoding: gzip` body are handled again. The body was
+  converted to text chunk by chunk before being decompressed, so
+  `gzip_decode()` never got the bytes it expects and the server answered an
+  `HTTP 500`. The chunks are now joined and decompressed before being read as
+  text. The client of this library is unaffected: it never compressed the
+  requests it sends.
+
+  The same change fixes a body larger than 10 MiB being rejected when a chunk
+  boundary fell in the middle of a multi-byte character (Python 3 only).
+  `SimpleJSONRPCRequestHandler.max_chunk_size` is now a class attribute, next
+  to `max_request_size`.
+
 - Interrupting a server with `Ctrl-C` while it is serving a call no longer
   turns the `KeyboardInterrupt` into a JSON-RPC error. The three handlers which
   caught every exception (`SimpleJSONRPCDispatcher._dispatch`,

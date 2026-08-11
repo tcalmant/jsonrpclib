@@ -529,6 +529,9 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
     # adjust the limit for a specific server.
     max_request_size = MAX_REQUEST_SIZE
 
+    # Maximum number of bytes read from the socket at once
+    max_chunk_size = 10 * 1024 * 1024
+
     def _send_fault_response(self, status, message, config):
         """
         Sends a JSON-RPC error as the body of an HTTP error response and closes
@@ -591,27 +594,32 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
             return
 
         try:
-            # Read the request body
-            max_chunk_size = 10 * 1024 * 1024
+            # Read the request body.
+            # The chunks are kept as bytes and joined before being decoded: a
+            # chunk can end in the middle of a multi-byte character, and the
+            # content encoding (gzip, ...) applies to the whole body.
             chunks = []
             while size_remaining:
-                chunk_size = min(size_remaining, max_chunk_size)
+                chunk_size = min(size_remaining, self.max_chunk_size)
                 raw_chunk = self.rfile.read(chunk_size)
                 if not raw_chunk:
                     break
-                chunks.append(utils.from_bytes(raw_chunk))
+                chunks.append(raw_chunk)
                 size_remaining -= len(raw_chunk)
-            data = "".join(chunks)
+            raw_data = b"".join(chunks)
 
             try:
-                # Decode content
-                data = self.decode_request_content(data)
-                if data is None:
+                # Undo the content encoding (works on bytes)
+                raw_data = self.decode_request_content(raw_data)
+                if raw_data is None:
                     # Unknown encoding, response has been sent
                     return
             except AttributeError:
                 # Available since Python 2.7
                 pass
+
+            # The body is complete and decoded: read it as text
+            data = utils.from_bytes(raw_data)
 
             # Execute the method
             response = self.server._marshaled_dispatch(
