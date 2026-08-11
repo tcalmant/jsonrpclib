@@ -116,13 +116,19 @@ class InternalTests(unittest.TestCase):
 
     def test_exception(self):
         """
-        Tests the call to a method that will fail
+        Tests the call to a method that will fail.
+
+        The details of the server-side exception are not sent to the caller:
+        see tests/test_error_details.py
         """
         client = self.get_client()
         try:
             client.fail()
         except jsonrpclib.ProtocolError as ex:
-            self.assertIn("ValueError", str(ex))
+            code, message = ex.args[0][0], ex.args[0][1]
+            self.assertEqual(-32603, code)
+            self.assertIn("Server error", message)
+            self.assertNotIn("ValueError", message)
         else:
             self.fail("Exception not raised")
 

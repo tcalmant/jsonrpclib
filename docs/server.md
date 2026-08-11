@@ -21,7 +21,7 @@ server.register_function(lambda x: x, 'ping')
 server.serve_forever()
 ```
 
-To start protect the server with SSL, use the following snippet:
+To protect the server with SSL, use the following snippet:
 
 ```python
 import ssl
@@ -30,8 +30,9 @@ from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 # Setup the SSL socket
 server = SimpleJSONRPCServer(
     ('localhost', 8080), bind_and_activate=False)
-server.socket = ssl.wrap_socket(
-    server.socket, certfile='server.pem', server_side=True)
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+context.load_cert_chain(certfile='server.pem')
+server.socket = context.wrap_socket(server.socket, server_side=True)
 server.server_bind()
 server.server_activate()
 
@@ -39,6 +40,26 @@ server.server_activate()
 
 # Start the server
 server.serve_forever()
+```
+
+```{note}
+`ssl.wrap_socket()`, which this snippet used to rely on, was removed in
+Python 3.12.
+On Python 2.7, use `ssl.PROTOCOL_TLSv1_2` instead of
+`ssl.PROTOCOL_TLS_SERVER`, which doesn't exist there.
+```
+
+Clients then connect using an `https://` URL.
+A custom SSL context can be given to `ServerProxy` with the `context`
+argument, *e.g.* to trust a self-signed certificate:
+
+```python
+import ssl
+
+import jsonrpclib
+
+context = ssl.create_default_context(cafile='server-cert.pem')
+client = jsonrpclib.ServerProxy('https://localhost:8080', context=context)
 ```
 
 ## Maximum Request Size
@@ -69,7 +90,18 @@ server = SimpleJSONRPCServer(
 ```
 
 When the limit is exceeded, the server responds with `HTTP 413`
-(`Request Entity Too Large`).
+(`Request Entity Too Large`) before reading the body.
+
+```{note}
+The limit is checked against the `Content-Length` header, so it bounds what is
+read from the socket, **not** what the body expands to: a `gzip`-encoded
+request is measured while still compressed.
+```
+
+Requests are also required to be framed, as their body cannot be read
+otherwise: a request without a `Content-Length` is answered with `HTTP 411`
+(`Length Required`), and one with an unusable value (not a number, or a
+negative one) with `HTTP 400` (`Bad Request`).
 
 ## A note on logging
 

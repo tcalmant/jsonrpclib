@@ -106,9 +106,28 @@ exploitation technique against them is still worth reporting.
 
 - **Class translation (`jsonclass`) deserializes objects from the peer.**
   When `use_jsonclass` is enabled, a `__jsonclass__` payload asks the receiver
-  to instantiate a class. Restrict what may be instantiated with the
-  `config.classes` registry, and only enable class translation between endpoints
-  you trust. See the changelog for how the default has been hardened.
+  to instantiate a class. Since 1.2, only the classes declared in the
+  `config.classes` registry (plus `decimal.Decimal`) are instantiated: the
+  classes named by the peer are not imported anymore, unless
+  `Config(allow_dynamic_classes=True)` is set. Keep that flag off across a trust
+  boundary, keep the registry as small as possible, and only enable class
+  translation between endpoints you trust. Note that the registry restricts
+  *which* classes may be instantiated, not what the peer may do to them: the
+  constructor arguments and the attributes of the rebuilt object both come from
+  the payload, so a registered class must tolerate arbitrary input.
+- **Dotted method names reach the attributes of a registered instance.**
+  Since 1.2, `register_instance()` refuses `a.b.c` style method names unless
+  `allow_dotted_names=True` is passed, as in `SimpleXMLRPCServer`. Enabling it
+  lets a client walk the public attributes of the registered object and call
+  anything it reaches, which is a remote-code-execution surface if that object
+  holds a reference to a module or to a powerful helper. Only enable it for
+  objects whose whole public attribute graph is safe to expose.
+- **A `ServerProxy` shared between threads leaks its headers between them.**
+  The additional headers of a proxy live in a list shared by all its callers,
+  so every request sent while a `_additional_headers` block is entered carries
+  those headers — including the requests made by other threads. If the block
+  carries credentials, the other threads send them too. Use one `ServerProxy`
+  per thread; the objects are cheap.
 - **The servers are unauthenticated.** `SimpleJSONRPCServer` and
   `PooledJSONRPCServer` perform no authentication or authorization: any client
   that can reach the port can invoke any registered method. Expose them only on
@@ -124,6 +143,12 @@ exploitation technique against them is still worth reporting.
 - **Do not enable class translation across a trust boundary.** If you must,
   populate `config.classes` so only known classes can be instantiated, and never
   rely on dynamic import against untrusted peers
+- **Keep `send_exception_details` off.** Since 1.2, a server-side exception is
+  reported to the caller as `Server error (ref: <id>)`, and its traceback is
+  written to the logs under the same reference. Setting
+  `Config(send_exception_details=True)` sends the file paths, source lines and
+  exception messages back to the caller: use it while developing, never on an
+  exposed server
 - **Use TLS.** Wrap the server socket with `ssl`, and connect with `https://`
 - **Bound request size.** Subclass `SimpleJSONRPCRequestHandler` and set
   `max_request_size` (see the README)

@@ -34,6 +34,8 @@ class ConfigTests(unittest.TestCase):
             "content_type",
             "user_agent",
             "ignore_attribute",
+            "allow_dynamic_classes",
+            "send_exception_details",
         ):
             self.assertEqual(getattr(config1, member), getattr(config2, member))
 
@@ -61,6 +63,8 @@ class ConfigTests(unittest.TestCase):
         config1.user_agent = "test_agent"
         config1.serialize_method = "_new_method"
         config1.ignore_attribute = "_new_method"
+        config1.allow_dynamic_classes = True
+        config1.send_exception_details = True
         self.compare_config(config1, config1.copy())
 
         # Handlers

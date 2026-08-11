@@ -73,6 +73,8 @@ class Config(object):
         serialize_method="_serialize",
         ignore_attribute="_ignore",
         serialize_handlers=None,
+        allow_dynamic_classes=False,
+        send_exception_details=False,
     ):
         """
         Sets up a configuration of JSONRPClib
@@ -92,6 +94,18 @@ class Config(object):
         :param serialize_handlers: A dictionary of dump handler functions by
                                    type for additional type support and for
                                    overriding dump of built-in types in utils
+        :param allow_dynamic_classes: Allow the class translator to import any
+                                      class named by the peer. This is unsafe:
+                                      it lets the peer instantiate any
+                                      importable class with the arguments it
+                                      chooses. Keep it to False and declare the
+                                      accepted classes in the classes registry.
+        :param send_exception_details: Describe the server-side exceptions in
+                                       the errors sent to the peer. This leaks
+                                       file paths, source lines and exception
+                                       messages: keep it to False outside of
+                                       development. The details are always
+                                       written to the logs.
         """
         # JSON-RPC specification
         self.version = version
@@ -112,6 +126,19 @@ class Config(object):
 
         # The list of classes to use for jsonclass translation.
         self.classes = LocalClasses()
+
+        # Set to True to let the class translator import the classes named by
+        # the peer instead of only accepting the registered ones.
+        # This gives the peer the ability to instantiate any importable class
+        # with the arguments of its choice: only enable it when both ends are
+        # trusted.
+        self.allow_dynamic_classes = allow_dynamic_classes
+
+        # Set to True to describe the server-side exceptions in the errors sent
+        # to the peer, instead of only referencing them.
+        # This gives any caller the file paths, the source lines and the
+        # exception messages of the server: only enable it while developing.
+        self.send_exception_details = send_exception_details
 
         # The serialize_method should be a string that references the
         # method on a custom class object which is responsible for
@@ -144,6 +171,8 @@ class Config(object):
             self.serialize_method,
             self.ignore_attribute,
             None,
+            self.allow_dynamic_classes,
+            self.send_exception_details,
         )
         new_config.classes = self.classes.copy()
         new_config.serialize_handlers = self.serialize_handlers.copy()

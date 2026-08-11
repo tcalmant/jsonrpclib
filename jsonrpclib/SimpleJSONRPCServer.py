@@ -34,6 +34,7 @@ import logging
 import socket
 import sys
 import traceback
+import uuid
 
 try:
     # Python 3
@@ -93,6 +94,9 @@ _logger = logging.getLogger(__name__)
 # Maximum size of a JSON-RPC request body (0 means unlimited)
 MAX_REQUEST_SIZE = 0
 
+# Maximum number of characters of a request quoted back in an error message
+MAX_ECHOED_REQUEST_SIZE = 256
+
 # ------------------------------------------------------------------------------
 
 
@@ -109,6 +113,65 @@ def get_version(request):
         return 1.0
 
     return None
+
+
+def _echoed_request(content):
+    """
+    Prepares the representation of a request to quote back in an error message.
+
+    The content of a request is chosen by its sender and its size is not
+    bounded by default: only its beginning is quoted, both in the error sent
+    back and in the logs.
+
+    :param content: The raw request, or the parsed request dictionary
+    :return: A string of at most MAX_ECHOED_REQUEST_SIZE characters, plus the
+             indication of what was left out
+    """
+    if not isinstance(content, utils.STRING_TYPES):
+        content = "{0}".format(content)
+
+    if len(content) <= MAX_ECHOED_REQUEST_SIZE:
+        return content
+
+    return "{0}... ({1} characters)".format(
+        content[:MAX_ECHOED_REQUEST_SIZE], len(content)
+    )
+
+
+def _server_error_fault(config, context):
+    """
+    Prepares the Fault describing an unexpected server-side error and logs the
+    details of that error.
+
+    The peer only gets a reference to the error: the exception, its message and
+    the source lines are internal details, which stay in the logs unless the
+    configuration explicitly allows sending them.
+
+    This method must be called from an exception handler.
+
+    :param config: A JSONRPClib Config instance
+    :param context: Description of what the server was doing, for the logs
+    :return: A Fault object describing an internal error
+    """
+    # Reference shared by the response and the log entry, to let the
+    # administrator find the details of an error reported by a caller
+    error_ref = uuid.uuid4().hex[:8]
+
+    if config.send_exception_details:
+        # Explicitly allowed: describe the exception to the peer
+        err_lines = traceback.format_exception(*sys.exc_info())
+        message = "Server error (ref: {0}): {1} | {2}".format(
+            error_ref,
+            err_lines[-2].splitlines()[0].strip(),
+            err_lines[-1].strip(),
+        )
+    else:
+        message = "Server error (ref: {0})".format(error_ref)
+
+    _logger.exception(
+        "Server-side error while %s [ref: %s]", context, error_ref
+    )
+    return Fault(-32603, message, config=config)
 
 
 def validate_request(request, json_config):
@@ -137,7 +200,7 @@ def validate_request(request, json_config):
     if not version:
         fault = Fault(
             -32600,
-            "Request {0} invalid.".format(request),
+            "Request {0} invalid.".format(_echoed_request(request)),
             rpcid=rpcid,
             config=json_config,
         )
@@ -290,7 +353,7 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
             fault = Fault(
                 -32700,
                 "Request {0} invalid. ({1}:{2})".format(
-                    data, type(ex).__name__, ex
+                    _echoed_request(data), type(ex).__name__, ex
                 ),
                 config=self.json_config,
             )
@@ -355,14 +418,11 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
                     response = dispatch_method(method, params)
                 else:
                     response = self._dispatch(method, params, config)
-            except Exception as ex:
+            except Exception:
                 # Return a fault
-                fault = Fault(
-                    -32603,
-                    "{0}:{1}".format(type(ex).__name__, ex),
-                    config=config,
+                fault = _server_error_fault(
+                    config, "calling method {0}".format(method)
                 )
-                _logger.error("Error calling method %s: %s", method, fault)
                 return fault.dump()
 
             if is_notification:
@@ -375,12 +435,9 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
             return jsonrpclib.dump(
                 response, rpcid=request["id"], is_response=True, config=config
             )
-        except Exception as ex:
+        except Exception:
             # JSON conversion exception
-            fault = Fault(
-                -32603, "{0}:{1}".format(type(ex).__name__, ex), config=config
-            )
-            _logger.error("Error preparing JSON-RPC result: %s", fault)
+            fault = _server_error_fault(config, "preparing the JSON-RPC result")
             return fault.dump()
 
     def _dispatch(self, method, params, config=None):
@@ -405,10 +462,18 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
                     # Instance has a custom dispatcher
                     return getattr(self.instance, "_dispatch")(method, params)
                 except AttributeError:
-                    # Resolve the method name in the instance
+                    # Resolve the method name in the instance.
+                    # Dotted names let the caller walk the attributes of the
+                    # registered instance, which can reach any callable it
+                    # holds a reference to: keep it opt-in, as
+                    # SimpleXMLRPCServer does. The attribute only exists once
+                    # register_instance() has been called, hence the default.
+                    allow_dotted_names = getattr(
+                        self, "allow_dotted_names", False
+                    )
                     try:
                         func = resolve_dotted_attribute(
-                            self.instance, method, True
+                            self.instance, method, allow_dotted_names
                         )
                     except AttributeError:
                         # Unknown method
@@ -428,19 +493,13 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
                 )
                 _logger.warning("Invalid call parameters: %s", fault)
                 return fault
-            except BaseException:
-                # Method exception
-                err_lines = traceback.format_exception(*sys.exc_info())
-                trace_string = "{0} | {1}".format(
-                    err_lines[-2].splitlines()[0].strip(), err_lines[-1]
+            except Exception:
+                # Method exception.
+                # KeyboardInterrupt and SystemExit are let through: they mean
+                # the server is being stopped, not that the call failed
+                return _server_error_fault(
+                    config, "calling method {0}".format(method)
                 )
-                fault = Fault(
-                    -32603,
-                    "Server error: {0}".format(trace_string),
-                    config=config,
-                )
-                _logger.exception("Server-side exception: %s", fault)
-                return fault
         else:
             # Unknown method
             fault = Fault(
@@ -470,6 +529,34 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
     # adjust the limit for a specific server.
     max_request_size = MAX_REQUEST_SIZE
 
+    # Maximum number of bytes read from the socket at once
+    max_chunk_size = 10 * 1024 * 1024
+
+    def _send_fault_response(self, status, message, config):
+        """
+        Sends a JSON-RPC error as the body of an HTTP error response and closes
+        the connection.
+
+        Used for the errors detected before reading the request body: the body
+        stays unread, so the connection can't be reused.
+
+        :param status: HTTP status code
+        :param message: Description of the error, sent to the client
+        :param config: A JSONRPClib Config instance
+        """
+        fault = Fault(-32600, message, config=config)
+        response = utils.to_bytes(fault.response())
+
+        self.send_response(status)
+        self.send_header("Content-type", config.content_type)
+        self.send_header("Content-length", str(len(response)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.write(response)
+
+        # Python 2 doesn't look at the Connection header we just sent
+        self.close_connection = True
+
     def do_POST(self):
         """
         Handles POST requests
@@ -481,46 +568,58 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
         # Retrieve the configuration
         config = getattr(self.server, "json_config", jsonrpclib.config.DEFAULT)
 
+        # Check the framing of the request before reading anything from it.
+        # Note that the body of a request without a Content-Length can't be
+        # read: the underlying handler doesn't support chunked bodies.
+        raw_length = self.headers.get("content-length", None)
+        if raw_length is None:
+            self._send_fault_response(
+                411, "Content-Length header is required.", config
+            )
+            return
+
         try:
-            # Read the request body
-            max_chunk_size = 10 * 1024 * 1024
-            size_remaining = int(self.headers["content-length"])
+            size_remaining = int(raw_length)
+            if size_remaining < 0:
+                raise ValueError("Negative Content-Length")
+        except ValueError:
+            self._send_fault_response(
+                400, "Invalid Content-Length header.", config
+            )
+            return
 
-            # Refuse requests exceeding the size limit before reading the body
-            if self.max_request_size and size_remaining > self.max_request_size:
-                fault = Fault(
-                    -32600,
-                    "Request too large.",
-                    config=config,
-                )
-                response = utils.to_bytes(fault.response())
-                self.send_response(413)
-                self.send_header("Content-type", config.content_type)
-                self.send_header("Content-length", str(len(response)))
-                self.send_header("Connection", "close")
-                self.end_headers()
-                self.wfile.write(response)
-                return
+        # Refuse requests exceeding the size limit before reading the body
+        if self.max_request_size and size_remaining > self.max_request_size:
+            self._send_fault_response(413, "Request too large.", config)
+            return
 
+        try:
+            # Read the request body.
+            # The chunks are kept as bytes and joined before being decoded: a
+            # chunk can end in the middle of a multi-byte character, and the
+            # content encoding (gzip, ...) applies to the whole body.
             chunks = []
             while size_remaining:
-                chunk_size = min(size_remaining, max_chunk_size)
+                chunk_size = min(size_remaining, self.max_chunk_size)
                 raw_chunk = self.rfile.read(chunk_size)
                 if not raw_chunk:
                     break
-                chunks.append(utils.from_bytes(raw_chunk))
+                chunks.append(raw_chunk)
                 size_remaining -= len(raw_chunk)
-            data = "".join(chunks)
+            raw_data = b"".join(chunks)
 
             try:
-                # Decode content
-                data = self.decode_request_content(data)
-                if data is None:
+                # Undo the content encoding (works on bytes)
+                raw_data = self.decode_request_content(raw_data)
+                if raw_data is None:
                     # Unknown encoding, response has been sent
                     return
             except AttributeError:
                 # Available since Python 2.7
                 pass
+
+            # The body is complete and decoded: read it as text
+            data = utils.from_bytes(raw_data)
 
             # Execute the method
             response = self.server._marshaled_dispatch(
@@ -529,17 +628,12 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
 
             # No exception: send a 200 OK
             self.send_response(200)
-        except BaseException:
-            # Exception: send 500 Server Error
+        except Exception:
+            # Exception: send 500 Server Error.
+            # KeyboardInterrupt and SystemExit are let through, so that they
+            # reach the server loop and stop it
             self.send_response(500)
-            err_lines = traceback.format_exception(*sys.exc_info())
-            trace_string = "{0} | {1}".format(
-                err_lines[-2].splitlines()[0].strip(), err_lines[-1]
-            )
-            fault = jsonrpclib.Fault(
-                -32603, "Server error: {0}".format(trace_string), config=config
-            )
-            _logger.exception("Server-side error: %s", fault)
+            fault = _server_error_fault(config, "handling the POST request")
             response = fault.response()
 
         if response is None:

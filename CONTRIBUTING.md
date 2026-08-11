@@ -95,6 +95,17 @@ To run `./run_tests.sh` on every supported Python version — including 2.7 and
 It streams a clean copy of the tree into an official `python:<version>` image
 and reports a pass/fail summary, without touching your working copy.
 
+Set `COVERAGE_OUTPUT_DIR` to keep the coverage data of each version, then
+combine them into a single report — this is what the CI does, so that the
+reported coverage describes the whole supported range rather than one version
+(the Python 2.7 branches of `utils.py`, for instance, are only executed there):
+
+```bash
+COVERAGE_OUTPUT_DIR=coverage-data ./run_tests_containers.sh
+coverage combine coverage-data/*.dat
+coverage report
+```
+
 Before opening a pull request:
 
 ```bash

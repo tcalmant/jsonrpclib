@@ -76,12 +76,25 @@ jobs:
         # container and runs ./run_tests.sh, which also cycles the optional JSON
         # backends. The engine is pinned to Docker (the runner ships both Docker
         # and Podman, and the script prefers Podman otherwise).
+        # COVERAGE_OUTPUT_DIR makes it copy the coverage data of this version
+        # out of the container, so the coverage job below can combine them all.
         env:
           CONTAINER_ENGINE: docker
+          COVERAGE_OUTPUT_DIR: coverage-data
         run: ./run_tests_containers.sh ${{ matrix.python-version }}
+      - name: Keep the coverage data of Python ${{ matrix.python-version }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-data-${{ matrix.python-version }}
+          path: coverage-data/*.dat
+          if-no-files-found: error
+          retention-days: 1
 
   coverage:
-    needs: lint
+    # Every version of the matrix contributes: the report describes the whole
+    # supported range (2.7 through 3.15), not just the one version a runner can
+    # install natively.
+    needs: test
     timeout-minutes: 10
     runs-on: ubuntu-latest
 
@@ -91,8 +104,22 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.14"
-      - name: Run the suite with coverage
-        run: ./run_tests.sh
+      - name: Get the coverage data of every version
+        uses: actions/download-artifact@v8
+        with:
+          pattern: coverage-data-*
+          merge-multiple: true
+          path: coverage-data
+      - name: Combine the coverage data
+        # The data files come from containers, where the tree lives in /work,
+        # and from several coverage releases (Python 2.7 caps at coverage 5.5,
+        # 3.6 at 6.2): the data format is compatible and .coveragerc maps the
+        # in-container paths back to this checkout.
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install coverage
+          coverage combine coverage-data/*.dat
+          coverage report
       - name: Coveralls
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_TOKEN }}

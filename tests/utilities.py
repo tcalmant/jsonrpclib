@@ -7,10 +7,12 @@ Tests utility classes
 """
 
 # Standard library
+import socket
 import threading
 
 # JSON-RPC library
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
+from jsonrpclib.utils import to_bytes
 
 # ------------------------------------------------------------------------------
 # Test methods
@@ -71,6 +73,58 @@ def fail():
     No argument, raises an exception
     """
     raise ValueError("Everything I do fails")
+
+
+# ------------------------------------------------------------------------------
+# Raw HTTP utility
+
+
+def raw_post(host, port, headers, body=b""):
+    """
+    Sends a raw HTTP POST request to a test server.
+
+    Used to send the requests a ServerProxy can't send, e.g. an invalid
+    framing or a body which isn't valid JSON.
+
+    :param host: The host of the server
+    :param port: The port the server listens to
+    :param headers: The headers of the request, as a string (each one ending
+                    with CRLF)
+    :param body: The raw body of the request
+    :return: The raw answer of the server
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(5)
+    try:
+        sock.connect((host, port))
+        sock.sendall(
+            to_bytes(
+                "POST / HTTP/1.0\r\nHost: {0}\r\n{1}\r\n".format(host, headers)
+            )
+            + body
+        )
+
+        response = b""
+        while True:
+            chunk = sock.recv(4096)
+            if not chunk:
+                break
+            response += chunk
+    finally:
+        sock.close()
+
+    return response
+
+
+def response_body(raw_response):
+    """
+    Extracts the body of a raw HTTP response
+
+    :param raw_response: A raw HTTP response, as bytes
+    :return: The body of the response, as a string
+    """
+    body = raw_response.split(b"\r\n\r\n", 1)[-1]
+    return body.decode("utf-8", "replace")
 
 
 # ------------------------------------------------------------------------------

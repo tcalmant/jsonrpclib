@@ -65,11 +65,17 @@ A `SimpleJSONRPCServer` class has been added. It is intended to emulate the
 
 ## Requirements
 
-This library supports `orjson`, `ujson`, `cjson` and `simplejson`, and looks
-for the parsers in that order (searching first for `orjson`, `ujson`, `cjson`,
-`simplejson` and finally for the *built-in* `json`).
-One of these must be installed to use this library, although if you have a
-standard distribution of 2.7+, you should already have one.
+This library runs on Python 2.7 and Python 3.6+.
+The test suite is run on every supported version (2.7, then 3.6 to 3.15) in
+GitHub CI, using the matching `python:<version>` container.
+
+No third-party package is required: the *built-in* `json` module is used by
+default.
+The library can also use `orjson`, `ujson`, `simplejson` and `cjson` if they
+are installed, and looks for the parsers in that order (`orjson`, `ujson`,
+`simplejson`, `cjson`, then the *built-in* `json`).
+Each candidate is validated with a round-trip before being used, so a parser
+which is installed but broken is skipped.
 Keep in mind that `orjson` is supposed to be the quickest, I believe, so if you
 are going for full-on optimization you may want to pick it up.
 
@@ -91,10 +97,13 @@ Alternatively, you can download the source from the GitHub repository at
 install it with the following commands:
 
 ```
-git clone git://github.com/tcalmant/jsonrpclib.git
+git clone https://github.com/tcalmant/jsonrpclib.git
 cd jsonrpclib
-python setup.py install
+pip install .
 ```
+
+On Python 2.7, where `pip` might be too old to handle the project metadata, use
+`python setup.py install` instead.
 
 ## A note on logging
 
@@ -132,7 +141,7 @@ server.register_function(lambda x: x, 'ping')
 server.serve_forever()
 ```
 
-To start protect the server with SSL, use the following snippet:
+To protect the server with SSL, use the following snippet:
 
 ```python
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
@@ -140,14 +149,32 @@ import ssl
 
 # Setup the SSL socket
 server = SimpleJSONRPCServer(('localhost', 8080), bind_and_activate=False)
-server.socket = ssl.wrap_socket(
-  server.socket, certfile='server.pem', server_side=True)
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+context.load_cert_chain(certfile='server.pem')
+server.socket = context.wrap_socket(server.socket, server_side=True)
 server.server_bind()
 server.server_activate()
 
 # ... register functions
 # Start the server
 server.serve_forever()
+```
+
+**Note:** `ssl.wrap_socket()`, which this snippet used to rely on, was removed
+in Python 3.12.
+On Python 2.7, use `ssl.PROTOCOL_TLSv1_2` instead of `ssl.PROTOCOL_TLS_SERVER`,
+which doesn't exist there.
+
+Clients then connect using an `https://` URL. A custom SSL context can be given
+to `ServerProxy` with the `context` argument, *e.g.* to trust a self-signed
+certificate:
+
+```python
+import jsonrpclib
+import ssl
+
+context = ssl.create_default_context(cafile='server-cert.pem')
+client = jsonrpclib.ServerProxy('https://localhost:8080', context=context)
 ```
 
 ### Maximum request size
@@ -179,7 +206,14 @@ server = SimpleJSONRPCServer(
 ```
 
 When the limit is exceeded, the server responds with `HTTP 413`
-(`Request Entity Too Large`).
+(`Request Entity Too Large`) before reading the body.
+
+The limit is checked against the `Content-Length` header, so it bounds what is
+read from the socket, **not** what the body expands to: a `gzip`-encoded
+request is measured while still compressed. Requests are also required to be
+framed: a request without a `Content-Length` is answered with `HTTP 411`
+(`Length Required`), and one with an unusable value with `HTTP 400`
+(`Bad Request`), since their body cannot be read.
 
 ### Notification Thread Pool
 
@@ -315,7 +349,8 @@ This is (obviously) taken from a console session.
 >>> batch._notify.add(4, 30)
 >>> results = batch()
 >>> for result in results:
->>> ... print(result)
+...     print(result)
+...
 11
 {'key': 'value'}
 # Note that there are only two responses -- this is according to spec.
@@ -413,6 +448,31 @@ invocation:
 
 Of course `_additional_headers` contexts can be nested as well.
 
+### Thread safety
+
+**Use one `ServerProxy` per thread.** A proxy is not safe to share between
+threads, as `xmlrpclib` isn't: its transport keeps a single connection, which
+concurrent calls would interleave on, and the additional headers are kept in a
+list shared by every caller of the proxy.
+
+The header stack is the surprising part, and it can leak credentials between
+threads. `_additional_headers` pushes onto that list when the block is entered
+and pops when it is left, and every request sent meanwhile carries the whole
+stack — including the requests of the other threads:
+
+```python
+# Thread A
+with client._additional_headers({"Authorization": "Bearer secret-of-A"}):
+    ...                       # a slow call
+
+# Thread B, at the same time, sharing the same client
+client.ping()                 # this request carries A's Authorization header
+```
+
+Give each thread its own `ServerProxy` — the objects are cheap. Sharing one
+between threads that use `_additional_headers`, or that send different
+credentials, sends the headers of one thread with the requests of another.
+
 ## Class Translation
 
 The library supports an *"automatic"* class translation process, turned on by default.
@@ -458,11 +518,17 @@ class TestSerial(object):
 >>> import jsonrpclib
 >>> import test_obj
 
+# Both ends must declare the classes they accept (see below)
+>>> config = jsonrpclib.config.Config()
+>>> config.classes.add(test_obj.TestObj)
+>>> config.classes.add(test_obj.TestSerial)
+
 # History is used only to print the serialized form of beans
 >>> history = jsonrpclib.history.History()
 >>> testobj1 = test_obj.TestObj()
 >>> testobj2 = test_obj.TestSerial()
->>> server = jsonrpclib.Server('http://localhost:8080', history=history)
+>>> server = jsonrpclib.Server(
+...   'http://localhost:8080', config=config, history=history)
 
 # The 'ping' just returns whatever is sent
 >>> ping1 = server.ping(testobj1)
@@ -492,6 +558,45 @@ Finally, if you are using classes that you have defined in the implementation
 
 Feedback on this "feature" is very, VERY much appreciated.
 
+### Declaring the accepted classes
+
+**Since version 1.2**, a `__jsonclass__` entry can only be converted back into
+an object if the class it names has been declared: the library doesn't import
+the classes named by the peer anymore. An unknown class raises a
+`TranslationError`, which is reported as an invalid request.
+
+Declare the classes you accept with `config.classes.add()`, on **BOTH** the
+server and the client:
+
+```python
+import jsonrpclib.config
+from jsonrpclib import ServerProxy
+
+config = jsonrpclib.config.Config()
+config.classes.add(TestSerial)              # registered as "TestSerial"
+config.classes.add(TestObj, "test_obj.TestObj")  # registered by full name
+
+server = ServerProxy("http://localhost:8080", config=config)
+```
+
+Classes are looked up by the full name written in the payload
+(`test_obj.TestSerial`), then by their short name (`TestSerial`), so both
+registrations above work. `decimal.Decimal` is always accepted: it is a value
+type the library serializes itself.
+
+The previous behavior, where any importable class named by the peer was
+imported and instantiated with the arguments it chose, is still available as an
+explicit opt-in:
+
+```python
+# Only when both ends are trusted: this lets the peer instantiate
+# any importable class with the arguments of its choice
+config = jsonrpclib.config.Config(allow_dynamic_classes=True)
+```
+
+Do not enable it across a trust boundary: it is the equivalent of
+`pickle.loads()` on peer-controlled data.
+
 ## Tests
 
 Tests are an almost-verbatim drop from the JSON-RPC specification 2.0 page.
@@ -503,12 +608,11 @@ This is the script executed by GitHub CI and in Docker containers before release
 The script can also be executed with `uv` to use a virtual environment to run tests:
 `uv run ./run_tests.sh`.
 
-You can also run tests for your setup using `unittest`, `nosetest` or `pytest`:
+You can also run tests for your setup using `unittest` or `pytest`:
 
 ```console
 python -m unittest discover tests
 python3 -m unittest discover tests
-nosetests tests
 pytest tests
 ```
 

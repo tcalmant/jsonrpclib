@@ -15,11 +15,109 @@
   `TranslationError`. Restrict what may be instantiated with `Config.classes`,
   and only enable class translation between endpoints you trust.
 
+  **This changes the default behaviour:** classes must now be declared with
+  `config.classes.add()` on **both** ends, including the enumerations and the
+  Pydantic models which used to be rebuilt implicitly. Only `decimal.Decimal`
+  is always accepted, as a value type the library serializes itself. Setting
+  `Config(allow_dynamic_classes=True)` restores the previous behaviour.
+
+- `register_instance()` no longer accepts dotted method names by default. The
+  `allow_dotted_names` argument of `register_instance()` was ignored: method
+  names were always resolved by walking the attributes of the registered
+  instance, so a client could reach any object it holds a reference to — and
+  therefore any callable on it. `SimpleXMLRPCServer`, which this library
+  mirrors, has always required this to be requested explicitly.
+
+  **This changes the default behaviour:** a server registering an instance now
+  answers `-32601` (method not supported) to `a.b.c` style names. If you rely
+  on them, and the registered instance holds nothing a caller should not reach,
+  ask for them as you would with `xmlrpclib`:
+  `server.register_instance(obj, allow_dotted_names=True)`. Attributes whose
+  name starts with `_` remain unreachable either way.
+
+- Server-side exceptions are no longer described in the errors sent to the
+  peer. A failing method used to answer with a fragment of its traceback — the
+  source file, the line, the function name and the exception message — which
+  any caller could read. Such an error is now reported as
+  `Server error (ref: <id>)`, and the same reference is written to the logs
+  along with the whole traceback, so the details can still be looked up.
+
+  The errors describing what the *caller* sent are unchanged: an unknown
+  method, invalid parameters or an unparsable request are still explicit, as
+  they are meant to be acted upon.
+
+  Set `Config(send_exception_details=True)` to get the previous behaviour back
+  while developing. Do not enable it on a server which is reachable by
+  untrusted callers.
+
 ### Fixed
 
 - `ServerProxy._additional_headers` no longer leaks headers when the wrapped
   call raises: the additional headers are now always removed from the transport
   when leaving the `with` block.
+
+- Requests with a `Content-Encoding: gzip` body are handled again. The body was
+  converted to text chunk by chunk before being decompressed, so
+  `gzip_decode()` never got the bytes it expects and the server answered an
+  `HTTP 500`. The chunks are now joined and decompressed before being read as
+  text. The client of this library is unaffected: it never compressed the
+  requests it sends.
+
+  The same change fixes a body larger than 10 MiB being rejected when a chunk
+  boundary fell in the middle of a multi-byte character (Python 3 only).
+  `SimpleJSONRPCRequestHandler.max_chunk_size` is now a class attribute, next
+  to `max_request_size`.
+
+- Interrupting a server with `Ctrl-C` while it is serving a call no longer
+  turns the `KeyboardInterrupt` into a JSON-RPC error. The three handlers which
+  caught every exception (`SimpleJSONRPCDispatcher._dispatch`,
+  `SimpleJSONRPCRequestHandler.do_POST` and `TransportMixIn.single_request`)
+  now let `KeyboardInterrupt` and `SystemExit` through, as `xmlrpc.client`
+  does, so they reach the server loop. A method raising `SystemExit` stops the
+  server instead of answering a `-32603` error.
+
+- An invalid request is no longer quoted back in full. The errors reporting an
+  unparsable request (`-32700`) or one without a version marker (`-32600`)
+  embedded the whole request, so a 20 kB body produced a 20 kB answer and a
+  20 kB log line, both chosen by the caller. Only the first
+  `SimpleJSONRPCServer.MAX_ECHOED_REQUEST_SIZE` characters (256 by default) are
+  quoted now, followed by the total length. What was wrong with the request is
+  still reported.
+
+- Requests are now checked for a usable framing before anything is read from
+  them. A request without a `Content-Length` is answered with an `HTTP 411`
+  (`Length Required`) and one with an unusable value with an `HTTP 400`
+  (`Bad Request`), where both used to raise inside the request handler and be
+  reported as an `HTTP 500` describing the server. Oversized requests are still
+  refused with an `HTTP 413` before the body is read.
+
+  Note that `max_request_size` is compared to the `Content-Length` header: it
+  bounds what is read from the socket, not what the body expands to once
+  decoded.
+
+### Documentation
+
+- Documented that a `ServerProxy` must not be shared between threads. Its
+  transport keeps a single connection, and its additional headers live in a
+  list shared by every caller: a request sent while another thread is inside a
+  `_additional_headers` block carries that block's headers, credentials
+  included. See the "Thread safety" section of the client documentation.
+
+- The SSL server snippet no longer uses `ssl.wrap_socket()`, which was removed
+  in Python 3.12: it now uses an `ssl.SSLContext`. The client side of TLS (the
+  `context` argument of `ServerProxy`) is documented as well.
+- The class translation examples now declare their classes in the registry, as
+  required since this release.
+- Fixed the description of the JSON parser lookup order (`orjson`, `ujson`,
+  `simplejson`, `cjson`, then the built-in `json`) and the claim that one of
+  the third-party parsers had to be installed: the built-in `json` module is
+  enough. The supported and tested Python versions (2.7, then 3.6 to 3.15) are
+  now stated explicitly.
+- Fixed the source installation instructions: the `git://` protocol has been
+  disabled by GitHub, and `pip install .` replaces `python setup.py install`
+  outside of Python 2.7. Dropped the mentions of `nosetests`.
+- The class translation page no longer claims the feature is turned off by
+  default, which contradicted both the code and the rest of the page.
 
 ### Project
 
@@ -42,6 +140,12 @@
   every supported Python version, including 2.7 and 3.6. Continuous integration
   now uses it to test the whole supported matrix (2.7 through 3.15), instead of
   only the versions the runner can install directly.
+- Coverage is now computed from every version of the test matrix instead of a
+  single interpreter: each container exports its coverage data
+  (`COVERAGE_OUTPUT_DIR`), and a final job combines them all before reporting to
+  Coveralls. This covers the version-specific branches, starting with the Python
+  2.7 half of `utils.py`. Removed the stale `.coveralls.yml`, which still
+  declared Travis CI as the service.
 
 ## 1.1
 

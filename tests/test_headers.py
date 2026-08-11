@@ -30,7 +30,7 @@ from jsonrpclib.SimpleJSONRPCServer import (
 from jsonrpclib.utils import from_bytes
 
 # Tests utilities
-from tests.utilities import UtilityServer
+from tests.utilities import UtilityServer, raw_post
 
 # ------------------------------------------------------------------------------
 
@@ -270,6 +270,41 @@ class HeadersTests(unittest.TestCase):
         self.assertTrue("x-test" in headers)
         self.assertEqual(headers["x-test"], "Global")
 
+    def test_should_restore_headers_on_error(self):
+        """Check that additional headers are removed even on error"""
+        # given
+        client = jsonrpclib.ServerProxy(
+            "http://{0}:{1}".format(HOST, self.port),
+            verbose=1,
+            headers={"X-Test": "Global"},
+        )
+
+        class _Error(Exception):
+            pass
+
+        # The global headers are already on the transport stack
+        transport = client("transport")
+        initial_headers = list(transport.additional_headers)
+
+        # when: the code inside the with block raises an error
+        try:
+            with client._additional_headers({"X-Test": "Method"}):
+                raise _Error("Something went wrong")
+        except _Error:
+            pass
+        else:
+            self.fail("Error not propagated")
+
+        # then: the additional headers are not kept in the transport
+        self.assertListEqual(transport.additional_headers, initial_headers)
+
+        # ... and the next request uses the global headers only
+        with self.captured_headers() as headers:
+            response = client.ping()
+            self.assertTrue(response)
+
+        self.assertEqual(headers["x-test"], "Global")
+
     def test_should_allow_to_nest_additional_header_blocks(self):
         """Check nested additional headers"""
         # given
@@ -296,6 +331,31 @@ class HeadersTests(unittest.TestCase):
         self.assertEqual(headers1["x-level-1"], "1")
         self.assertTrue("x-level-2" in headers2)
         self.assertEqual(headers2["x-level-2"], "2")
+
+    def test_missing_content_length(self):
+        """
+        Tests that a request without a Content-Length is rejected with an
+        HTTP 411, as its body can't be read
+        """
+        response = raw_post(
+            HOST, self.port, "Content-Type: application/json-rpc\r\n"
+        )
+        self.assertIn(b"411", response.split(b"\r\n")[0])
+
+    def test_invalid_content_length(self):
+        """
+        Tests that a request with an unusable Content-Length is rejected with
+        an HTTP 400
+        """
+        for length in ("abc", "-5", ""):
+            response = raw_post(
+                HOST, self.port, "Content-Length: {0}\r\n".format(length)
+            )
+            self.assertIn(
+                b"400",
+                response.split(b"\r\n")[0],
+                "Content-Length '{0}' was not refused".format(length),
+            )
 
     def test_content_length_too_large(self):
         """
