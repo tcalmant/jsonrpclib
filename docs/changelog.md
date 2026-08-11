@@ -15,6 +15,12 @@
   `TranslationError`. Restrict what may be instantiated with `Config.classes`,
   and only enable class translation between endpoints you trust.
 
+  **This changes the default behaviour:** classes must now be declared with
+  `config.classes.add()` on **both** ends, including the enumerations and the
+  Pydantic models which used to be rebuilt implicitly. Only `decimal.Decimal`
+  is always accepted, as a value type the library serializes itself. Setting
+  `Config(allow_dynamic_classes=True)` restores the previous behaviour.
+
 ### Fixed
 
 - `ServerProxy._additional_headers` no longer leaks headers when the wrapped

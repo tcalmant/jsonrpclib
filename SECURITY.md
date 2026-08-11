@@ -106,9 +106,12 @@ exploitation technique against them is still worth reporting.
 
 - **Class translation (`jsonclass`) deserializes objects from the peer.**
   When `use_jsonclass` is enabled, a `__jsonclass__` payload asks the receiver
-  to instantiate a class. Restrict what may be instantiated with the
-  `config.classes` registry, and only enable class translation between endpoints
-  you trust. See the changelog for how the default has been hardened.
+  to instantiate a class. Since 1.2, only the classes declared in the
+  `config.classes` registry (plus `decimal.Decimal`) are instantiated: the
+  classes named by the peer are not imported anymore, unless
+  `Config(allow_dynamic_classes=True)` is set. Keep that flag off across a trust
+  boundary, keep the registry as small as possible, and only enable class
+  translation between endpoints you trust.
 - **The servers are unauthenticated.** `SimpleJSONRPCServer` and
   `PooledJSONRPCServer` perform no authentication or authorization: any client
   that can reach the port can invoke any registered method. Expose them only on

@@ -9,6 +9,7 @@ TODO: test custom serialization
 """
 
 # Standard library
+import collections
 import datetime
 import sys
 
@@ -181,6 +182,21 @@ class SerializationTests(unittest.TestCase):
         if sys.version_info[0] < 3:
             self.assertCountEqual = self.assertItemsEqual
 
+        # Beans are not loaded unless they are declared: prepare a
+        # configuration which accepts the ones used in these tests
+        self.config = jsonrpclib.config.Config()
+        for clazz in (
+            Bean,
+            InheritanceBean,
+            SlotBean,
+            InheritanceSlotBean,
+            SecondInheritanceSlotBean,
+        ):
+            self.config.classes.add(clazz)
+
+        if enum is not None:
+            self.config.classes.add(Color)
+
     def test_primitive(self):
         """
         Tests dump & load of primitive types
@@ -295,7 +311,7 @@ class SerializationTests(unittest.TestCase):
             )
 
             # Reload it
-            deserialized = load(serialized)
+            deserialized = load(serialized, config=self.config)
 
             # Dictionary is left as-is
             self.assertIn(
@@ -361,28 +377,37 @@ class SerializationTests(unittest.TestCase):
             self.assertEqual(data.value, enum_serialized["__jsonclass__"][1][0])
 
             # Loading
-            result = load(enum_serialized)
+            result = load(enum_serialized, config=self.config)
             self.assertEqual(data, result)
 
         # Embedded
         data = [Color.BLUE, Color.RED]
         serialized = dump(data)
-        result = load(serialized)
+        result = load(serialized, config=self.config)
         self.assertListEqual(data, result)
 
     def test_decimal(self):
         """
         Tests the serialization of decimal.Decimal
+
+        decimal.Decimal is always accepted by load(), even with the default
+        (restrictive) configuration and with a classes registry set.
         """
         if Decimal is None:
             self.skipTest("decimal package not available.")
 
-        for d in (1.1, "3.2"):
-            d_dec = Decimal(d)
-            serialized = dump(d_dec)
-            result = load(serialized)
-            self.assertIsInstance(result, Decimal)
-            self.assertEqual(result, d_dec)
+        for config in (None, self.config):
+            for d in (1.1, "3.2"):
+                d_dec = Decimal(d)
+                serialized = dump(d_dec)
+                if config is None:
+                    # Default configuration
+                    result = load(serialized)
+                else:
+                    result = load(serialized, config=config)
+
+                self.assertIsInstance(result, Decimal)
+                self.assertEqual(result, d_dec)
 
     def test_load_unknown_module(self):
         """
@@ -391,3 +416,73 @@ class SerializationTests(unittest.TestCase):
         """
         obj = {"__jsonclass__": ["nonexistent_module_xyz.SomeClass", []]}
         self.assertRaises(TranslationError, load, obj)
+
+        # Same result when dynamic classes are allowed: the import fails
+        dynamic_config = jsonrpclib.config.Config(allow_dynamic_classes=True)
+        self.assertRaises(TranslationError, load, obj, None, dynamic_config)
+
+    def test_load_refuses_unregistered_class(self):
+        """
+        Tests that an unregistered class is not imported with the default
+        configuration
+        """
+        obj = {"__jsonclass__": ["collections.OrderedDict", [{"pwned": 1}]]}
+
+        # Default configuration: refused
+        self.assertRaises(TranslationError, load, dict(obj))
+
+        # Explicit default configuration: refused too
+        self.assertRaises(
+            TranslationError, load, dict(obj), None, jsonrpclib.config.Config()
+        )
+
+        # A registry which doesn't contain the class: still refused
+        self.assertRaises(TranslationError, load, dict(obj), None, self.config)
+
+    def test_load_registered_class(self):
+        """
+        Tests that a registered class is loaded, without allowing dynamic
+        classes
+        """
+        obj = {"__jsonclass__": ["collections.OrderedDict", [{"pwned": 1}]]}
+
+        # Registration by full name
+        config = jsonrpclib.config.Config()
+        config.classes.add(collections.OrderedDict, "collections.OrderedDict")
+        self.assertIsInstance(load(dict(obj), config=config), dict)
+
+        # Registration by short name
+        config = jsonrpclib.config.Config()
+        config.classes.add(collections.OrderedDict)
+        self.assertIsInstance(load(dict(obj), config=config), dict)
+
+    def test_load_allow_dynamic_classes(self):
+        """
+        Tests that the previous behaviour can be restored explicitly
+        """
+        obj = {"__jsonclass__": ["collections.OrderedDict", [{"pwned": 1}]]}
+
+        config = jsonrpclib.config.Config(allow_dynamic_classes=True)
+        result = load(dict(obj), config=config)
+        self.assertIsInstance(result, collections.OrderedDict)
+        self.assertEqual(result, {"pwned": 1})
+
+        # A class name without a module can't be imported
+        self.assertRaises(
+            TranslationError,
+            load,
+            {"__jsonclass__": ["OrderedDict", []]},
+            None,
+            config,
+        )
+
+    def test_load_beans_refused_by_default(self):
+        """
+        Tests that the beans of this module are refused with the default
+        configuration, i.e. that the registry is what makes them loadable
+        """
+        serialized = dump(Bean())
+        self.assertRaises(TranslationError, load, serialized)
+
+        # ... but they are loaded with the test configuration
+        self.assertIsInstance(load(serialized, config=self.config), Bean)

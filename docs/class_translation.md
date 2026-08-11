@@ -80,3 +80,48 @@ Finally, if you are using classes that you have defined in the implementation
 method.
 
 Feedback on this "feature" is very, VERY much appreciated.
+
+## Declaring the accepted classes
+
+```{versionchanged} 1.2
+A `__jsonclass__` entry can only be converted back into an object if the class
+it names has been declared: the library doesn't import the classes named by the
+peer anymore.
+```
+
+An unknown class raises a `TranslationError`, which is reported to the peer as
+an invalid request.
+Declare the classes you accept with `config.classes.add()`, on **BOTH** the
+server and the client:
+
+```python
+import jsonrpclib.config
+from jsonrpclib import ServerProxy
+
+config = jsonrpclib.config.Config()
+config.classes.add(TestSerial)                   # as "TestSerial"
+config.classes.add(TestObj, "test_obj.TestObj")  # by full name
+
+server = ServerProxy("http://localhost:8080", config=config)
+```
+
+Classes are looked for using the full name written in the payload
+(`test_obj.TestSerial`), then using their short name (`TestSerial`): both
+registrations above work.
+`decimal.Decimal` is always accepted, as it is a value type the library
+serializes itself.
+
+The previous behaviour, where any importable class named by the peer was
+imported then instantiated with the arguments it chose, is still available as
+an explicit opt-in:
+
+```python
+# Only when both ends are trusted: this lets the peer instantiate
+# any importable class with the arguments of its choice
+config = jsonrpclib.config.Config(allow_dynamic_classes=True)
+```
+
+```{warning}
+Do not set `allow_dynamic_classes` across a trust boundary: it is the
+equivalent of calling `pickle.loads()` on data controlled by the peer.
+```

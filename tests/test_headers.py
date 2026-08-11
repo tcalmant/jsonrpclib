@@ -270,6 +270,41 @@ class HeadersTests(unittest.TestCase):
         self.assertTrue("x-test" in headers)
         self.assertEqual(headers["x-test"], "Global")
 
+    def test_should_restore_headers_on_error(self):
+        """Check that additional headers are removed even on error"""
+        # given
+        client = jsonrpclib.ServerProxy(
+            "http://{0}:{1}".format(HOST, self.port),
+            verbose=1,
+            headers={"X-Test": "Global"},
+        )
+
+        class _Error(Exception):
+            pass
+
+        # The global headers are already on the transport stack
+        transport = client("transport")
+        initial_headers = list(transport.additional_headers)
+
+        # when: the code inside the with block raises an error
+        try:
+            with client._additional_headers({"X-Test": "Method"}):
+                raise _Error("Something went wrong")
+        except _Error:
+            pass
+        else:
+            self.fail("Error not propagated")
+
+        # then: the additional headers are not kept in the transport
+        self.assertListEqual(transport.additional_headers, initial_headers)
+
+        # ... and the next request uses the global headers only
+        with self.captured_headers() as headers:
+            response = client.ping()
+            self.assertTrue(response)
+
+        self.assertEqual(headers["x-test"], "Global")
+
     def test_should_allow_to_nest_additional_header_blocks(self):
         """Check nested additional headers"""
         # given

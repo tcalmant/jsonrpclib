@@ -492,6 +492,45 @@ Finally, if you are using classes that you have defined in the implementation
 
 Feedback on this "feature" is very, VERY much appreciated.
 
+### Declaring the accepted classes
+
+**Since version 1.2**, a `__jsonclass__` entry can only be converted back into
+an object if the class it names has been declared: the library doesn't import
+the classes named by the peer anymore. An unknown class raises a
+`TranslationError`, which is reported as an invalid request.
+
+Declare the classes you accept with `config.classes.add()`, on **BOTH** the
+server and the client:
+
+```python
+import jsonrpclib.config
+from jsonrpclib import ServerProxy
+
+config = jsonrpclib.config.Config()
+config.classes.add(TestSerial)              # registered as "TestSerial"
+config.classes.add(TestObj, "test_obj.TestObj")  # registered by full name
+
+server = ServerProxy("http://localhost:8080", config=config)
+```
+
+Classes are looked up by the full name written in the payload
+(`test_obj.TestSerial`), then by their short name (`TestSerial`), so both
+registrations above work. `decimal.Decimal` is always accepted: it is a value
+type the library serializes itself.
+
+The previous behavior, where any importable class named by the peer was
+imported and instantiated with the arguments it chose, is still available as an
+explicit opt-in:
+
+```python
+# Only when both ends are trusted: this lets the peer instantiate
+# any importable class with the arguments of its choice
+config = jsonrpclib.config.Config(allow_dynamic_classes=True)
+```
+
+Do not enable it across a trust boundary: it is the equivalent of
+`pickle.loads()` on peer-controlled data.
+
 ## Tests
 
 Tests are an almost-verbatim drop from the JSON-RPC specification 2.0 page.
