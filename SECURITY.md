@@ -137,6 +137,12 @@ exploitation technique against them is still worth reporting.
 - **Do not enable class translation across a trust boundary.** If you must,
   populate `config.classes` so only known classes can be instantiated, and never
   rely on dynamic import against untrusted peers
+- **Keep `send_exception_details` off.** Since 1.2, a server-side exception is
+  reported to the caller as `Server error (ref: <id>)`, and its traceback is
+  written to the logs under the same reference. Setting
+  `Config(send_exception_details=True)` sends the file paths, source lines and
+  exception messages back to the caller: use it while developing, never on an
+  exposed server
 - **Use TLS.** Wrap the server socket with `ssl`, and connect with `https://`
 - **Bound request size.** Subclass `SimpleJSONRPCRequestHandler` and set
   `max_request_size` (see the README)

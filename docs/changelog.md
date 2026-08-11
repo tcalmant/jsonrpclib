@@ -35,6 +35,21 @@
   `server.register_instance(obj, allow_dotted_names=True)`. Attributes whose
   name starts with `_` remain unreachable either way.
 
+- Server-side exceptions are no longer described in the errors sent to the
+  peer. A failing method used to answer with a fragment of its traceback — the
+  source file, the line, the function name and the exception message — which
+  any caller could read. Such an error is now reported as
+  `Server error (ref: <id>)`, and the same reference is written to the logs
+  along with the whole traceback, so the details can still be looked up.
+
+  The errors describing what the *caller* sent are unchanged: an unknown
+  method, invalid parameters or an unparsable request are still explicit, as
+  they are meant to be acted upon.
+
+  Set `Config(send_exception_details=True)` to get the previous behaviour back
+  while developing. Do not enable it on a server which is reachable by
+  untrusted callers.
+
 ### Fixed
 
 - `ServerProxy._additional_headers` no longer leaks headers when the wrapped

@@ -34,6 +34,7 @@ import logging
 import socket
 import sys
 import traceback
+import uuid
 
 try:
     # Python 3
@@ -109,6 +110,42 @@ def get_version(request):
         return 1.0
 
     return None
+
+
+def _server_error_fault(config, context):
+    """
+    Prepares the Fault describing an unexpected server-side error and logs the
+    details of that error.
+
+    The peer only gets a reference to the error: the exception, its message and
+    the source lines are internal details, which stay in the logs unless the
+    configuration explicitly allows sending them.
+
+    This method must be called from an exception handler.
+
+    :param config: A JSONRPClib Config instance
+    :param context: Description of what the server was doing, for the logs
+    :return: A Fault object describing an internal error
+    """
+    # Reference shared by the response and the log entry, to let the
+    # administrator find the details of an error reported by a caller
+    error_ref = uuid.uuid4().hex[:8]
+
+    if config.send_exception_details:
+        # Explicitly allowed: describe the exception to the peer
+        err_lines = traceback.format_exception(*sys.exc_info())
+        message = "Server error (ref: {0}): {1} | {2}".format(
+            error_ref,
+            err_lines[-2].splitlines()[0].strip(),
+            err_lines[-1].strip(),
+        )
+    else:
+        message = "Server error (ref: {0})".format(error_ref)
+
+    _logger.exception(
+        "Server-side error while %s [ref: %s]", context, error_ref
+    )
+    return Fault(-32603, message, config=config)
 
 
 def validate_request(request, json_config):
@@ -355,14 +392,11 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
                     response = dispatch_method(method, params)
                 else:
                     response = self._dispatch(method, params, config)
-            except Exception as ex:
+            except Exception:
                 # Return a fault
-                fault = Fault(
-                    -32603,
-                    "{0}:{1}".format(type(ex).__name__, ex),
-                    config=config,
+                fault = _server_error_fault(
+                    config, "calling method {0}".format(method)
                 )
-                _logger.error("Error calling method %s: %s", method, fault)
                 return fault.dump()
 
             if is_notification:
@@ -375,12 +409,9 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
             return jsonrpclib.dump(
                 response, rpcid=request["id"], is_response=True, config=config
             )
-        except Exception as ex:
+        except Exception:
             # JSON conversion exception
-            fault = Fault(
-                -32603, "{0}:{1}".format(type(ex).__name__, ex), config=config
-            )
-            _logger.error("Error preparing JSON-RPC result: %s", fault)
+            fault = _server_error_fault(config, "preparing the JSON-RPC result")
             return fault.dump()
 
     def _dispatch(self, method, params, config=None):
@@ -438,17 +469,9 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
                 return fault
             except BaseException:
                 # Method exception
-                err_lines = traceback.format_exception(*sys.exc_info())
-                trace_string = "{0} | {1}".format(
-                    err_lines[-2].splitlines()[0].strip(), err_lines[-1]
+                return _server_error_fault(
+                    config, "calling method {0}".format(method)
                 )
-                fault = Fault(
-                    -32603,
-                    "Server error: {0}".format(trace_string),
-                    config=config,
-                )
-                _logger.exception("Server-side exception: %s", fault)
-                return fault
         else:
             # Unknown method
             fault = Fault(
@@ -540,14 +563,7 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
         except BaseException:
             # Exception: send 500 Server Error
             self.send_response(500)
-            err_lines = traceback.format_exception(*sys.exc_info())
-            trace_string = "{0} | {1}".format(
-                err_lines[-2].splitlines()[0].strip(), err_lines[-1]
-            )
-            fault = jsonrpclib.Fault(
-                -32603, "Server error: {0}".format(trace_string), config=config
-            )
-            _logger.exception("Server-side error: %s", fault)
+            fault = _server_error_fault(config, "handling the POST request")
             response = fault.response()
 
         if response is None:

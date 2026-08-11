@@ -74,6 +74,7 @@ class Config(object):
         ignore_attribute="_ignore",
         serialize_handlers=None,
         allow_dynamic_classes=False,
+        send_exception_details=False,
     ):
         """
         Sets up a configuration of JSONRPClib
@@ -99,6 +100,12 @@ class Config(object):
                                       importable class with the arguments it
                                       chooses. Keep it to False and declare the
                                       accepted classes in the classes registry.
+        :param send_exception_details: Describe the server-side exceptions in
+                                       the errors sent to the peer. This leaks
+                                       file paths, source lines and exception
+                                       messages: keep it to False outside of
+                                       development. The details are always
+                                       written to the logs.
         """
         # JSON-RPC specification
         self.version = version
@@ -126,6 +133,12 @@ class Config(object):
         # with the arguments of its choice: only enable it when both ends are
         # trusted.
         self.allow_dynamic_classes = allow_dynamic_classes
+
+        # Set to True to describe the server-side exceptions in the errors sent
+        # to the peer, instead of only referencing them.
+        # This gives any caller the file paths, the source lines and the
+        # exception messages of the server: only enable it while developing.
+        self.send_exception_details = send_exception_details
 
         # The serialize_method should be a string that references the
         # method on a custom class object which is responsible for
@@ -159,6 +172,7 @@ class Config(object):
             self.ignore_attribute,
             None,
             self.allow_dynamic_classes,
+            self.send_exception_details,
         )
         new_config.classes = self.classes.copy()
         new_config.serialize_handlers = self.serialize_handlers.copy()
