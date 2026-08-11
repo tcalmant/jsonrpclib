@@ -16,11 +16,19 @@
 #   ./run_tests_containers.sh 3.12 3.13       # only these versions
 #   CONTAINER_ENGINE=docker ./run_tests_containers.sh
 #   PYTHON_IMAGE_VARIANT=-slim ./run_tests_containers.sh 3.13   # slim images
+#   COVERAGE_OUTPUT_DIR=coverage-data ./run_tests_containers.sh # keep coverage
 #
 # Environment:
 #   CONTAINER_ENGINE       podman or docker (auto-detected, podman preferred)
 #   PYTHON_IMAGE_VARIANT   suffix added to the image tag (e.g. -slim, -bookworm)
 #   ENGINE_RUN_ARGS        extra arguments passed to "<engine> run"
+#   COVERAGE_OUTPUT_DIR    if set, the coverage data file of each version is
+#                          copied out of its container into that directory, as
+#                          "coverage-py<version>.dat". Combine them with:
+#                              coverage combine <dir>/*.dat && coverage report
+#                          (.coveragerc maps the in-container /work paths back
+#                          to the local checkout). Without it, no host file is
+#                          written, as before.
 #
 # Exit code: 0 if every version passed, 1 if any version failed.
 
@@ -77,6 +85,18 @@ fi
 # shellcheck disable=SC2206
 EXTRA_RUN_ARGS=(${ENGINE_RUN_ARGS:-})
 
+# Directory where the coverage data files are exported (empty: don't export)
+COVERAGE_DIR="${COVERAGE_OUTPUT_DIR:-}"
+if [ -n "$COVERAGE_DIR" ]; then
+    if ! mkdir -p "$COVERAGE_DIR"; then
+        echo "error: cannot create coverage output directory $COVERAGE_DIR" >&2
+        exit 1
+    fi
+
+    # Absolute path, so it stays valid whatever the current directory
+    COVERAGE_DIR="$(cd "$COVERAGE_DIR" && pwd)"
+fi
+
 # ----------------------------------------------------------------------------
 # Helpers
 
@@ -129,18 +149,44 @@ for version in $VERSIONS; do
     echo ">>> Python $version  ($image)"
     echo "============================================================"
 
+    # When the coverage data is to be kept, the container must survive the run
+    # so that it can be copied out: it is named and removed explicitly instead
+    # of relying on --rm.
+    container="jsonrpclib-tests-${version}-$$"
+    if [ -n "$COVERAGE_DIR" ]; then
+        RUN_ARGS=(--name "$container" -i)
+        "$ENGINE" rm -f "$container" >/dev/null 2>&1
+    else
+        RUN_ARGS=(--rm -i)
+    fi
+
     # The working tree is streamed into the container over stdin (a tar pipe)
-    # rather than bind-mounted: no host files are modified (coverage data stays
-    # inside the container), and there is no SELinux relabeling to worry about.
+    # rather than bind-mounted: no host file is modified (unless the coverage
+    # data is explicitly exported below), and there is no SELinux relabeling to
+    # worry about.
     # The workdir is created inside the shell (podman does not create --workdir
     # by itself); run_tests.sh is invoked through bash so it does not depend on
     # the executable bit surviving the tar round-trip.
     tar "${TAR_EXCLUDES[@]}" -C "$REPO_DIR" -cf - . \
-        | "$ENGINE" run --rm -i \
+        | "$ENGINE" run "${RUN_ARGS[@]}" \
             "${EXTRA_RUN_ARGS[@]}" \
             "$image" \
             bash -c 'mkdir -p /work && cd /work && tar -xf - && exec bash run_tests.sh'
     rc=${PIPESTATUS[1]}
+
+    if [ -n "$COVERAGE_DIR" ]; then
+        # run_tests.sh ends with a "coverage combine", so the whole run of this
+        # version (every JSON backend included) sits in a single data file.
+        # A run which failed early might not have reached that point.
+        if "$ENGINE" cp "$container:/work/.coverage" \
+                "$COVERAGE_DIR/coverage-py${version}.dat" 2>/dev/null; then
+            echo ">>> Python $version: coverage data exported"
+        else
+            echo ">>> Python $version: no coverage data to export" >&2
+        fi
+
+        "$ENGINE" rm -f "$container" >/dev/null 2>&1
+    fi
 
     if [ "$rc" -eq 0 ]; then
         echo ">>> Python $version: PASS"

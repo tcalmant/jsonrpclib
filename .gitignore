@@ -15,13 +15,16 @@ __pycache__
 
 # Tox
 .tox/
+
+# Coverage
 .coverage
 .coverage.*
 htmlcov/
+work/
 
-# Nosetests
-.noseids
-nosetests.xml
+# Coverage data exported from the test containers
+# (COVERAGE_OUTPUT_DIR of run_tests_containers.sh)
+coverage-data/
 
 # Development environment
 .venv/
