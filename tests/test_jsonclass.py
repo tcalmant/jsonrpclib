@@ -3,8 +3,6 @@
 """
 Tests the jsonclass module, for bean (de)serialization
 
-TODO: test custom serialization
-
 :license: Apache License 2.0
 """
 
@@ -88,6 +86,38 @@ class InheritanceBean(Bean):
             and self.first == other.first
             and self._second == other._second
             and self.__third == other.__third
+        )
+
+
+class SerializableBean(object):
+    """
+    Sample bean which requires constructor arguments, and therefore describes
+    them itself through a serialization method (see the documentation)
+    """
+
+    foo = "bar"
+
+    def __init__(self, first, second):
+        """
+        Sets up members
+        """
+        self.first = first
+        self.second = second
+
+    def _serialize(self):
+        """
+        Returns the constructor arguments and the attributes of this bean
+        """
+        return ([self.first, self.second], {"foo": self.foo})
+
+    def __eq__(self, other):
+        """
+        Checks equality
+        """
+        return (
+            self.first == other.first
+            and self.second == other.second
+            and self.foo == other.foo
         )
 
 
@@ -188,6 +218,7 @@ class SerializationTests(unittest.TestCase):
         for clazz in (
             Bean,
             InheritanceBean,
+            SerializableBean,
             SlotBean,
             InheritanceSlotBean,
             SecondInheritanceSlotBean,
@@ -486,3 +517,103 @@ class SerializationTests(unittest.TestCase):
 
         # ... but they are loaded with the test configuration
         self.assertIsInstance(load(serialized, config=self.config), Bean)
+
+    def test_serialize_method(self):
+        """
+        Tests the custom serialization method: a class which can't be rebuilt
+        from its attributes describes its constructor arguments itself
+        """
+        data = SerializableBean("first", 2)
+        serialized = dump(data)
+
+        # The constructor arguments are kept in the __jsonclass__ entry, the
+        # attributes next to it
+        self.assertEqual(
+            "{0}.{1}".format(
+                SerializableBean.__module__, SerializableBean.__name__
+            ),
+            serialized["__jsonclass__"][0],
+        )
+        self.assertListEqual(["first", 2], list(serialized["__jsonclass__"][1]))
+        self.assertEqual("bar", serialized["foo"])
+
+        # Reload it the way the wire does, as the constructor arguments are a
+        # list once they have been through JSON
+        reloaded = load(
+            jsonrpclib.jloads(jsonrpclib.jdumps(serialized)),
+            config=self.config,
+        )
+        self.assertIsInstance(reloaded, SerializableBean)
+        self.assertEqual(data, reloaded)
+
+    def test_load_empty_module_name(self):
+        """
+        Tests that an empty class name is refused
+        """
+        self.assertRaises(TranslationError, load, {"__jsonclass__": ["", []]})
+
+    def test_load_invalid_module_name(self):
+        """
+        Tests that a class name with unexpected characters is refused, before
+        anything is looked up
+        """
+        for name in ("bad-name.Class", "module.Class;drop", "a b.C", "../C"):
+            self.assertRaises(
+                TranslationError,
+                load,
+                {"__jsonclass__": [name, []]},
+                None,
+                jsonrpclib.config.Config(allow_dynamic_classes=True),
+            )
+
+    def test_load_unknown_class_in_known_module(self):
+        """
+        Tests the dynamic import of a class which doesn't exist in a module
+        which does
+        """
+        config = jsonrpclib.config.Config(allow_dynamic_classes=True)
+        self.assertRaises(
+            TranslationError,
+            load,
+            {"__jsonclass__": ["collections.NoSuchClass", []]},
+            None,
+            config,
+        )
+
+    def test_load_invalid_constructor_arguments(self):
+        """
+        Tests that a class which can't be built with the given arguments gives
+        a TranslationError, not the raw TypeError
+        """
+        # Bean.__init__ takes no argument
+        for params in ([1, 2, 3], {"unexpected": True}):
+            self.assertRaises(
+                TranslationError,
+                load,
+                {"__jsonclass__": ["Bean", params]},
+                None,
+                self.config,
+            )
+
+    def test_load_constructor_arguments_type(self):
+        """
+        Tests that the constructor arguments must be a list or a dictionary
+        """
+        for params in ("a string", 42, None, True):
+            self.assertRaises(
+                TranslationError,
+                load,
+                {"__jsonclass__": ["Bean", params]},
+                None,
+                self.config,
+            )
+
+    def test_load_keyword_constructor_arguments(self):
+        """
+        Tests the construction of a bean with keyword arguments
+        """
+        obj = {"__jsonclass__": ["SerializableBean", {"first": 1, "second": 2}]}
+        reloaded = load(obj, config=self.config)
+
+        self.assertIsInstance(reloaded, SerializableBean)
+        self.assertEqual(SerializableBean(1, 2), reloaded)
