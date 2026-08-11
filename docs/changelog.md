@@ -56,6 +56,14 @@
   call raises: the additional headers are now always removed from the transport
   when leaving the `with` block.
 
+- An invalid request is no longer quoted back in full. The errors reporting an
+  unparsable request (`-32700`) or one without a version marker (`-32600`)
+  embedded the whole request, so a 20 kB body produced a 20 kB answer and a
+  20 kB log line, both chosen by the caller. Only the first
+  `SimpleJSONRPCServer.MAX_ECHOED_REQUEST_SIZE` characters (256 by default) are
+  quoted now, followed by the total length. What was wrong with the request is
+  still reported.
+
 - Requests are now checked for a usable framing before anything is read from
   them. A request without a `Content-Length` is answered with an `HTTP 411`
   (`Length Required`) and one with an unusable value with an `HTTP 400`

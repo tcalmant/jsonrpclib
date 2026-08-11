@@ -94,6 +94,9 @@ _logger = logging.getLogger(__name__)
 # Maximum size of a JSON-RPC request body (0 means unlimited)
 MAX_REQUEST_SIZE = 0
 
+# Maximum number of characters of a request quoted back in an error message
+MAX_ECHOED_REQUEST_SIZE = 256
+
 # ------------------------------------------------------------------------------
 
 
@@ -110,6 +113,29 @@ def get_version(request):
         return 1.0
 
     return None
+
+
+def _echoed_request(content):
+    """
+    Prepares the representation of a request to quote back in an error message.
+
+    The content of a request is chosen by its sender and its size is not
+    bounded by default: only its beginning is quoted, both in the error sent
+    back and in the logs.
+
+    :param content: The raw request, or the parsed request dictionary
+    :return: A string of at most MAX_ECHOED_REQUEST_SIZE characters, plus the
+             indication of what was left out
+    """
+    if not isinstance(content, utils.STRING_TYPES):
+        content = "{0}".format(content)
+
+    if len(content) <= MAX_ECHOED_REQUEST_SIZE:
+        return content
+
+    return "{0}... ({1} characters)".format(
+        content[:MAX_ECHOED_REQUEST_SIZE], len(content)
+    )
 
 
 def _server_error_fault(config, context):
@@ -174,7 +200,7 @@ def validate_request(request, json_config):
     if not version:
         fault = Fault(
             -32600,
-            "Request {0} invalid.".format(request),
+            "Request {0} invalid.".format(_echoed_request(request)),
             rpcid=rpcid,
             config=json_config,
         )
@@ -327,7 +353,7 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
             fault = Fault(
                 -32700,
                 "Request {0} invalid. ({1}:{2})".format(
-                    data, type(ex).__name__, ex
+                    _echoed_request(data), type(ex).__name__, ex
                 ),
                 config=self.json_config,
             )

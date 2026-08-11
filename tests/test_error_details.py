@@ -25,6 +25,9 @@ from jsonrpclib import ProtocolError, ServerProxy
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 from jsonrpclib.utils import to_bytes
 
+# Tests utilities
+from tests.utilities import raw_post, response_body
+
 # ------------------------------------------------------------------------------
 
 HOST = socket.gethostbyname("localhost")
@@ -214,37 +217,90 @@ class ErrorDetailsTests(unittest.TestCase):
         here with a body which is not valid UTF-8)
         """
         self.make_client()
-        port = self.server.socket.getsockname()[1]
-
-        sock = socket.create_connection((HOST, port))
-        sock.settimeout(5)
-        try:
-            sock.sendall(
-                to_bytes(
-                    "POST / HTTP/1.1\r\nHost: {0}\r\n"
-                    "Content-Type: application/json-rpc\r\n"
-                    "Content-Length: 4\r\n\r\n".format(HOST)
-                )
-                + b"\xff\xfe\xff\xfe"
+        body = response_body(
+            raw_post(
+                HOST,
+                self.server.socket.getsockname()[1],
+                "Content-Type: application/json-rpc\r\nContent-Length: 4\r\n",
+                b"\xff\xfe\xff\xfe",
             )
-
-            raw = b""
-            while True:
-                chunk = sock.recv(4096)
-                if not chunk:
-                    break
-                raw += chunk
-        finally:
-            sock.close()
+        )
 
         # The error is reported, without describing the server
-        body = raw.decode("utf-8", "replace").split("\r\n\r\n", 1)[-1]
         self.assertIsNotNone(
             REF_PATTERN.search(body), "No error reference in {0}".format(body)
         )
         self.assertNotIn(".py", body)
         self.assertNotIn("Traceback", body)
         self.assertNotIn("UnicodeDecodeError", body)
+
+    def post_body(self, body):
+        """
+        Sends a raw request body to the test server
+
+        :param body: The body of the request, as a string
+        :return: The body of the response, as a string
+        """
+        raw_body = to_bytes(body)
+        return response_body(
+            raw_post(
+                HOST,
+                self.server.socket.getsockname()[1],
+                "Content-Type: application/json-rpc\r\n"
+                "Content-Length: {0}\r\n".format(len(raw_body)),
+                raw_body,
+            )
+        )
+
+    def test_parse_error_quotes_a_bounded_part(self):
+        """
+        Tests that an unparsable request is not quoted back in full
+        """
+        self.make_client()
+
+        padding = "x" * 20000
+        answer = self.post_body(
+            '{{"jsonrpc":"2.0","id":1,"method":"m","params":["{0}"'.format(
+                padding
+            )
+        )
+
+        # The answer must not grow with the request
+        self.assertLess(len(answer), 1024)
+        self.assertNotIn(padding, answer)
+
+        # The caller still learns what was wrong, and what was left out
+        self.assertIn("-32700", answer)
+        self.assertIn("characters", answer)
+
+    def test_invalid_request_quotes_a_bounded_part(self):
+        """
+        Tests that a request without a version marker is not quoted back in
+        full either
+        """
+        self.make_client()
+
+        padding = "y" * 20000
+        answer = self.post_body(
+            '{{"method":"ping","params":["{0}"]}}'.format(padding)
+        )
+
+        self.assertLess(len(answer), 1024)
+        self.assertNotIn(padding, answer)
+        self.assertIn("-32600", answer)
+        self.assertIn("characters", answer)
+
+    def test_short_request_is_quoted_as_is(self):
+        """
+        Tests that a small request is still quoted back entirely: the point is
+        to bound the answer, not to hide what the caller sent
+        """
+        self.make_client()
+
+        answer = self.post_body('{"jsonrpc":"2.0","id":1,')
+
+        self.assertIn('{\\"jsonrpc\\":\\"2.0\\",\\"id\\":1,', answer)
+        self.assertNotIn("characters)", answer)
 
 
 if __name__ == "__main__":
