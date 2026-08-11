@@ -360,9 +360,11 @@ class TransportMixIn(object):
             if response.status == 200:
                 self.verbose = verbose
                 return self.parse_response(response)
-        except:
+        except Exception:
             # All unexpected errors leave connection in
             # a strange state, so we clear it.
+            # Note: KeyboardInterrupt and SystemExit are let through, as
+            # xmlrpc.client does, so that they keep interrupting the caller
             self.close()
             raise
 

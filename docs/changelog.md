@@ -56,6 +56,14 @@
   call raises: the additional headers are now always removed from the transport
   when leaving the `with` block.
 
+- Interrupting a server with `Ctrl-C` while it is serving a call no longer
+  turns the `KeyboardInterrupt` into a JSON-RPC error. The three handlers which
+  caught every exception (`SimpleJSONRPCDispatcher._dispatch`,
+  `SimpleJSONRPCRequestHandler.do_POST` and `TransportMixIn.single_request`)
+  now let `KeyboardInterrupt` and `SystemExit` through, as `xmlrpc.client`
+  does, so they reach the server loop. A method raising `SystemExit` stops the
+  server instead of answering a `-32603` error.
+
 - An invalid request is no longer quoted back in full. The errors reporting an
   unparsable request (`-32700`) or one without a version marker (`-32600`)
   embedded the whole request, so a 20 kB body produced a 20 kB answer and a

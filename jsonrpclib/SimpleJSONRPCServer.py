@@ -493,8 +493,10 @@ class SimpleJSONRPCDispatcher(SimpleXMLRPCDispatcher, object):
                 )
                 _logger.warning("Invalid call parameters: %s", fault)
                 return fault
-            except BaseException:
-                # Method exception
+            except Exception:
+                # Method exception.
+                # KeyboardInterrupt and SystemExit are let through: they mean
+                # the server is being stopped, not that the call failed
                 return _server_error_fault(
                     config, "calling method {0}".format(method)
                 )
@@ -618,8 +620,10 @@ class SimpleJSONRPCRequestHandler(SimpleXMLRPCRequestHandler):
 
             # No exception: send a 200 OK
             self.send_response(200)
-        except BaseException:
-            # Exception: send 500 Server Error
+        except Exception:
+            # Exception: send 500 Server Error.
+            # KeyboardInterrupt and SystemExit are let through, so that they
+            # reach the server loop and stop it
             self.send_response(500)
             fault = _server_error_fault(config, "handling the POST request")
             response = fault.response()

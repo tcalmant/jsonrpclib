@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -- Content-Encoding: UTF-8 --
 """
-Tests the content of the errors sent to the peer.
+Tests which errors are reported to the peer, and what they contain.
 
 An unexpected server-side error must not describe itself to the caller: the
 exception, its message and the source lines stay in the logs, and the peer only
@@ -9,10 +9,14 @@ gets a reference to look them up with. The errors which describe what the
 *caller* sent (invalid request, unknown method, invalid parameters) stay
 explicit, as they are meant to be acted upon.
 
+Interruptions (KeyboardInterrupt, SystemExit) are not errors of the call: they
+must stop the server instead of being reported as a result.
+
 :license: Apache License 2.0
 """
 
 # Standard library
+import json
 import logging
 import re
 import socket
@@ -21,8 +25,11 @@ import unittest
 
 # JSON-RPC library
 import jsonrpclib.config
-from jsonrpclib import ProtocolError, ServerProxy
-from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
+from jsonrpclib import Fault, ProtocolError, ServerProxy
+from jsonrpclib.SimpleJSONRPCServer import (
+    SimpleJSONRPCDispatcher,
+    SimpleJSONRPCServer,
+)
 from jsonrpclib.utils import to_bytes
 
 # Tests utilities
@@ -301,6 +308,83 @@ class ErrorDetailsTests(unittest.TestCase):
 
         self.assertIn('{\\"jsonrpc\\":\\"2.0\\",\\"id\\":1,', answer)
         self.assertNotIn("characters)", answer)
+
+
+# ------------------------------------------------------------------------------
+
+
+class InterruptionTests(unittest.TestCase):
+    """
+    Checks that an interruption isn't turned into a JSON-RPC error.
+
+    A KeyboardInterrupt or a SystemExit means the server is being stopped: it
+    must travel up to the server loop, where a normal exception is caught and
+    reported to the caller.
+    """
+
+    def setUp(self):
+        """
+        Tests initialization
+        """
+        self.dispatcher = SimpleJSONRPCDispatcher()
+        self.dispatcher.register_function(boom, "boom")
+
+        for exception in (KeyboardInterrupt, SystemExit):
+            self.dispatcher.register_function(
+                self.make_raiser(exception), exception.__name__
+            )
+
+    @staticmethod
+    def make_raiser(exception):
+        """
+        Returns a method raising the given exception
+
+        :param exception: An exception class
+        :return: A method raising it
+        """
+
+        def raiser():
+            raise exception("Stopping")
+
+        return raiser
+
+    def test_dispatch_lets_interruptions_through(self):
+        """
+        Tests that _dispatch doesn't convert an interruption into a Fault
+        """
+        for exception in (KeyboardInterrupt, SystemExit):
+            self.assertRaises(
+                exception,
+                self.dispatcher._dispatch,
+                exception.__name__,
+                [],
+            )
+
+    def test_dispatch_reports_errors(self):
+        """
+        Tests that a normal exception is still reported as a Fault
+        """
+        fault = self.dispatcher._dispatch("boom", [])
+        self.assertIsInstance(fault, Fault)
+        self.assertEqual(-32603, fault.faultCode)
+
+    def test_marshaled_dispatch_lets_interruptions_through(self):
+        """
+        Tests that the whole dispatch chain lets an interruption reach the
+        request handler, which lets it reach the server loop
+        """
+        for exception in (KeyboardInterrupt, SystemExit):
+            request = json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": exception.__name__,
+                    "params": [],
+                }
+            )
+            self.assertRaises(
+                exception, self.dispatcher._marshaled_dispatch, request
+            )
 
 
 if __name__ == "__main__":
