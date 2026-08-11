@@ -743,8 +743,12 @@ class ServerProxy(XMLServerProxy):
         >>> # Here old headers are restored
         """
         self.__transport.push_headers(headers)
-        yield self
-        self.__transport.pop_headers(headers)
+        try:
+            yield self
+        finally:
+            # Always restore the previous headers, even if the code inside the
+            # with block raised an error
+            self.__transport.pop_headers(headers)
 
 
 # ------------------------------------------------------------------------------
