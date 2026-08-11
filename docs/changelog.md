@@ -66,6 +66,12 @@
   every supported Python version, including 2.7 and 3.6. Continuous integration
   now uses it to test the whole supported matrix (2.7 through 3.15), instead of
   only the versions the runner can install directly.
+- Coverage is now computed from every version of the test matrix instead of a
+  single interpreter: each container exports its coverage data
+  (`COVERAGE_OUTPUT_DIR`), and a final job combines them all before reporting to
+  Coveralls. This covers the version-specific branches, starting with the Python
+  2.7 half of `utils.py`. Removed the stale `.coveralls.yml`, which still
+  declared Travis CI as the service.
 
 ## 1.1
 
