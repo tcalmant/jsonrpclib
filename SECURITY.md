@@ -122,6 +122,12 @@ exploitation technique against them is still worth reporting.
   anything it reaches, which is a remote-code-execution surface if that object
   holds a reference to a module or to a powerful helper. Only enable it for
   objects whose whole public attribute graph is safe to expose.
+- **A `ServerProxy` shared between threads leaks its headers between them.**
+  The additional headers of a proxy live in a list shared by all its callers,
+  so every request sent while a `_additional_headers` block is entered carries
+  those headers — including the requests made by other threads. If the block
+  carries credentials, the other threads send them too. Use one `ServerProxy`
+  per thread; the objects are cheap.
 - **The servers are unauthenticated.** `SimpleJSONRPCServer` and
   `PooledJSONRPCServer` perform no authentication or authorization: any client
   that can reach the port can invoke any registered method. Expose them only on

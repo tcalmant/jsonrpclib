@@ -448,6 +448,31 @@ invocation:
 
 Of course `_additional_headers` contexts can be nested as well.
 
+### Thread safety
+
+**Use one `ServerProxy` per thread.** A proxy is not safe to share between
+threads, as `xmlrpclib` isn't: its transport keeps a single connection, which
+concurrent calls would interleave on, and the additional headers are kept in a
+list shared by every caller of the proxy.
+
+The header stack is the surprising part, and it can leak credentials between
+threads. `_additional_headers` pushes onto that list when the block is entered
+and pops when it is left, and every request sent meanwhile carries the whole
+stack — including the requests of the other threads:
+
+```python
+# Thread A
+with client._additional_headers({"Authorization": "Bearer secret-of-A"}):
+    ...                       # a slow call
+
+# Thread B, at the same time, sharing the same client
+client.ping()                 # this request carries A's Authorization header
+```
+
+Give each thread its own `ServerProxy` — the objects are cheap. Sharing one
+between threads that use `_additional_headers`, or that send different
+credentials, sends the headers of one thread with the requests of another.
+
 ## Class Translation
 
 The library supports an *"automatic"* class translation process, turned on by default.

@@ -77,6 +77,12 @@
 
 ### Documentation
 
+- Documented that a `ServerProxy` must not be shared between threads. Its
+  transport keeps a single connection, and its additional headers live in a
+  list shared by every caller: a request sent while another thread is inside a
+  `_additional_headers` block carries that block's headers, credentials
+  included. See the "Thread safety" section of the client documentation.
+
 - The SSL server snippet no longer uses `ssl.wrap_socket()`, which was removed
   in Python 3.12: it now uses an `ssl.SSLContext`. The client side of TLS (the
   `context` argument of `ServerProxy`) is documented as well.

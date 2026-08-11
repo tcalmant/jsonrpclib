@@ -273,6 +273,10 @@ class TransportMixIn(object):
         """
         Adds a dictionary of headers to the additional headers list
 
+        The list is not protected against concurrent accesses: a transport,
+        and therefore a ServerProxy, must be used by a single thread (see
+        ``ServerProxy._additional_headers``).
+
         :param headers: A dictionary
         """
         self.additional_headers.append(headers)
@@ -741,6 +745,12 @@ class ServerProxy(XMLServerProxy):
         ...     new_client.method()
         ...
         >>> # Here old headers are restored
+
+        The headers are pushed on a stack shared by every caller of this
+        proxy, and every request sent while the block is entered carries the
+        whole stack. Use one ServerProxy per thread: sharing one means the
+        headers given here, credentials included, are also sent with the
+        requests of the other threads.
         """
         self.__transport.push_headers(headers)
         try:
