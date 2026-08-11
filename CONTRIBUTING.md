@@ -71,6 +71,13 @@ uninstalling each. This is what CI runs:
 uv run ./run_tests.sh
 ```
 
+`uv sync`/`uv run` only ever build a venv for a Python 3 interpreter — `coverage`
+and `pytest` (the `dev` dependency group) are marked `python_version >= '3.6'`
+so `uv` doesn't try to resolve them for the 2.7 branch of `requires-python`,
+which would fail since neither tool has supported 2.7 since before this
+project required `coverage>=6.2`. 2.7 itself is still exercised, just through
+`run_tests_containers.sh` below instead of `uv`.
+
 For a quick run against your current interpreter:
 
 ```bash

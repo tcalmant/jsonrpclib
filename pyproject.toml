@@ -44,9 +44,14 @@ Documentation = "https://jsonrpclib-pelix.readthedocs.io/"
 Source = "https://github.com/tcalmant/jsonrpclib/"
 
 [dependency-groups]
+# python_version markers keep these resolvable on 2.7: neither tool supports
+# it (coverage dropped 2.7 in 6.x; the last 2.7-compatible release is 5.5,
+# installed directly by run_tests.sh/run_tests_containers.sh instead), so
+# `uv sync`/`uv run` would otherwise fail to find a universal solution across
+# the whole requires-python range.
 dev = [
-    "coverage>=6.2",
-    "pytest>=7.0.1",
+    "coverage>=6.2; python_version >= '3.6'",
+    "pytest>=7.0.1; python_version >= '3.6'",
 ]
 
 [tool.setuptools]
