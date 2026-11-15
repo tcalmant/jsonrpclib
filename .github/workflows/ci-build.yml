@@ -2,10 +2,7 @@
 # coverage.
 #
 # The tests run inside the matching official ``python:<version>`` container
-# (3.15 uses its release-candidate image) via ./run_tests_containers.sh. This is
-# what lets the CI cover 2.7, 3.6 and 3.15 too — actions/setup-python cannot
-# provide those on a current runner, which is why the plain matrix used to fail
-# on 3.15.
+# via ./run_tests_containers.sh.
 
 name: CI Build
 
@@ -52,7 +49,7 @@ jobs:
       fail-fast: false
       matrix:
         # Every version declared as supported. Each runs in its matching
-        # python:<version> container (3.15 -> the release-candidate image),
+        # python:<version> container,
         # which is the only way to cover 2.7 and 3.6 on a modern runner.
         python-version:
           [
@@ -66,7 +63,7 @@ jobs:
             "3.12",
             "3.13",
             "3.14",
-            "3.15-rc",
+            "3.15",
           ]
 
     steps:
