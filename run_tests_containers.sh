@@ -100,16 +100,12 @@ fi
 # ----------------------------------------------------------------------------
 # Helpers
 
-# Returns the image reference for a Python version. 3.15 is not released yet, so
-# its release-candidate tag is used. Images are fully qualified so that podman
-# does not prompt for a registry.
+# Returns the image reference for a Python version. Images are fully qualified
+# so that podman does not prompt for a registry.
 image_for() {
     local version="$1"
     local variant="${PYTHON_IMAGE_VARIANT:-}"
-    case "$version" in
-        3.15) echo "docker.io/library/python:3.15-rc${variant}" ;;
-        *) echo "docker.io/library/python:${version}${variant}" ;;
-    esac
+    echo "docker.io/library/python:${version}${variant}"
 }
 
 # Files and folders that must not be copied into the container: host virtual
